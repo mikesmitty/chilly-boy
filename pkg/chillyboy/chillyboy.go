@@ -36,7 +36,6 @@ func Root() func(cmd *cobra.Command, args []string) {
 		spiBus := viper.GetString("spibus")
 		i2cBus := viper.GetString("i2cbus")
 		pidInterval := viper.GetDuration("pid-interval")
-		pidHistoryOffset := viper.GetDuration("pid-history-offset")
 
 		_, err := host.Init()
 		errChk(err)
@@ -83,8 +82,7 @@ func Root() func(cmd *cobra.Command, args []string) {
 		ki := viper.GetFloat64("pid-ki")
 		kd := viper.GetFloat64("pid-kd")
 		peak := viper.GetFloat64("peak-light")
-		pidCtrl := cmhpid.NewController(kp, ki, kd, peak, pidInterval, pidHistoryOffset)
-		//pidCh, pidReset, controller := pidCtrl.GetController(lightFan.Subscribe("pid"), rtdFan.Subscribe("pid"))
+		pidCtrl := cmhpid.NewController(kp, ki, kd, peak)
 		pidCh, pidReset, controller := pidCtrl.GetController(lightFan.Subscribe("pid"))
 		slog.Debug("Starting PID controller")
 		g.Go(controller)

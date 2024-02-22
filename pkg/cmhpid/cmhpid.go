@@ -27,7 +27,7 @@ type ControllerState struct {
 	Signal                 float64
 }
 
-func NewController(kp, ki, kd, peak float64, interval time.Duration, historyOffset time.Duration) *Controller {
+func NewController(kp, ki, kd, peak float64) *Controller {
 	return &Controller{
 		Enabled: true,
 		c: pid.Controller{
