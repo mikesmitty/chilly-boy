@@ -11,11 +11,9 @@ import (
 )
 
 type Controller struct {
-	Enabled       bool
-	c             pid.Controller
-	historyOffset time.Duration
-	interval      time.Duration
-	peak          float64
+	Enabled bool
+	c       pid.Controller
+	peak    float64
 }
 
 type ControllerState struct {
@@ -37,48 +35,29 @@ func NewController(kp, ki, kd, peak float64, interval time.Duration, historyOffs
 				ProportionalGain: kp,
 				IntegralGain:     ki,
 				DerivativeGain:   kd,
-				//AntiWindUpGain:   awg,
-				//MaxOutput:        10.0,
-				//MinOutput:        -100.0,
 			},
 		},
-		historyOffset: historyOffset,
-		interval:      interval,
-		peak:          peak,
+		peak: peak,
 	}
 }
 
-// func (c *Controller) GetController(lightChan <-chan uint64, rtdChan <-chan float64) (<-chan ControllerState, func(), func() error) {
 func (c *Controller) GetController(lightChan <-chan uint64) (<-chan ControllerState, func(), func() error) {
 	stateOutput := make(chan ControllerState, 1)
 
 	return stateOutput, c.c.Reset, func() error {
 		emaScaleFactor := 100.0
-		//historyScaleFactor := 1.0
-		//tempScaleFactor := 1.0
 		lightScaleFactor := 10.0
 		lightScale := 100.0 / c.peak
 		lastReading := 0.0
-		//lastTemp := 0.0
 		lastTime := time.Now()
 
 		// Exponential moving average
-		// alpha = 2/(N+1), 60 samples = 0.032786885
-		emaNow := ewma.NewMovingAverage(30)
-		//emaThen := ewma.NewMovingAverage(60)
-
-		/*
-			bufSize := int(float64(c.historyOffset) / float64(c.interval))
-			history := make([]float64, bufSize)
-			histPrimed := false
-			h := 0
-		*/
+		// alpha = 2/(N+1), 30 samples = 0.064516129
+		ema := ewma.NewMovingAverage(30)
 
 		slog.Debug("starting PID controller loop", "kp", c.c.Config.ProportionalGain, "ki", c.c.Config.IntegralGain, "kd", c.c.Config.DerivativeGain, "module", "cmhpid")
 		for light := range lightChan {
 			slog.Debug("pid received light reading", "light", light, "module", "cmhpid")
-			//temp := <-rtdChan
-			//slog.Debug("pid received temperature reading", "temp", temp, "module", "cmhpid")
 
 			now := time.Now()
 			elapsed := now.Sub(lastTime)
@@ -86,34 +65,14 @@ func (c *Controller) GetController(lightChan <-chan uint64) (<-chan ControllerSt
 			slog.Debug("elapsed time since last cycle", "elapsed", elapsed, "module", "cmhpid")
 
 			reading := float64(light)
-			//lightDiff := (reading - lastReading) * lightScale * lightScaleFactor
 			diff := (reading - lastReading) * lightScale * lightScaleFactor
 			slog.Debug("light differences", "current", reading, "last", lastReading, "module", "cmhpid")
-			//tempDiff := (temp - lastTemp) * tempScaleFactor
-			//slog.Debug("temperature differences", "current", temp, "last", lastTemp, "module", "cmhpid")
-			//diff := (lightDiff + tempDiff)
 			slog.Debug("total difference", "diff", diff, "module", "cmhpid")
 			lastReading = reading
-			//lastTemp = temp
-			emaNow.Add(diff)
-			slog.Debug("exponential moving average", "ema", emaNow.Value(), "scaleFactor", emaScaleFactor, "module", "cmhpid")
+			ema.Add(diff)
+			slog.Debug("exponential moving average", "ema", ema.Value(), "scaleFactor", emaScaleFactor, "module", "cmhpid")
 
-			// Historical buffer
-			/*
-				history[h] = temp
-				h = (h + 1) % bufSize
-				if h == 0 {
-					histPrimed = true
-				}
-			*/
-			//emaThen.Add(history[h])
-
-			signalInput := (emaNow.Value() * emaScaleFactor)
-			/*
-				if histPrimed {
-					signalInput += ((temp - history[h]) * historyScaleFactor)
-				}
-			*/
+			signalInput := (ema.Value() * emaScaleFactor)
 
 			c.c.Update(pid.ControllerInput{
 				// Target value
@@ -126,9 +85,7 @@ func (c *Controller) GetController(lightChan <-chan uint64) (<-chan ControllerSt
 			signal := math.Max(-100.0, math.Min(3.0, c.c.State.ControlSignal))
 			slog.Debug("pid control signal", "control", c.c.State.ControlSignal, "signal", signal, "module", "cmhpid")
 			stateOutput <- ControllerState{
-				LightDiff: diff,
-				//LightDiff:              lightDiff,
-				//TempDiff:               tempDiff,
+				LightDiff:              diff,
 				ControlError:           c.c.State.ControlError,
 				ControlErrorIntegral:   c.c.State.ControlErrorIntegral,
 				ControlErrorDerivative: c.c.State.ControlErrorDerivative,
