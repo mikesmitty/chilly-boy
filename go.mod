@@ -6,7 +6,7 @@ require (
 	github.com/JenswBE/golang-tsl2591 v0.0.0-20230415120237-14a517a709e8
 	github.com/VividCortex/ewma v1.2.0
 	github.com/eclipse/paho.mqtt.golang v1.4.3
-	github.com/mikesmitty/max31865 v0.2.0
+	github.com/mikesmitty/max31865 v0.3.1
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
 	go.einride.tech/pid v0.1.1
