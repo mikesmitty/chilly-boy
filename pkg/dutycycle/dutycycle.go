@@ -12,10 +12,10 @@ func NewDutyCycle(input <-chan cmhpid.ControllerState) func() error {
 		total := 0.0
 		i := 0
 		for v := range input {
-			total := total - buf[i] + v.Signal
+			total := total - buf[i] + v.ControlSignal
 			slog.Info("duty cycle", "value", total/600)
 
-			buf[i] = v.Signal
+			buf[i] = v.ControlSignal
 			i++
 			if i == len(buf) {
 				i = 0

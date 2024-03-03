@@ -4,98 +4,193 @@ import (
 	"encoding/json"
 	"log/slog"
 	"math"
+	"sort"
 	"time"
 
-	"github.com/VividCortex/ewma"
+	"github.com/mikesmitty/chilly-boy/pkg/swma"
 	"go.einride.tech/pid"
 )
 
 type Controller struct {
-	Enabled bool
-	c       pid.Controller
-	peak    float64
+	Enabled         bool
+	MaxLight        float64
+	c               pid.AntiWindupController
+	feedForwardGain float64
+	interval        time.Duration
+	tuning          bool
+	tuningAmp       float64
+	tuningBase      float64
 }
 
 type ControllerState struct {
-	LightDiff float64
-	TempDiff  float64
+	FeedForward float64
+	LightDiff   float64
+	TempDiff    float64
 
 	ControlError           float64
 	ControlErrorIntegral   float64
 	ControlErrorDerivative float64
 	ControlSignal          float64
-	Signal                 float64
+	SignalInput            float64
 }
 
-func NewController(kp, ki, kd, peak float64) *Controller {
+func NewController(tuning bool, tuneAmp, tuneBase, kp, ki, kd, ff, awg, min, max, maxLight float64, lp, interval time.Duration) *Controller {
+	if tuning {
+		ki, kd, ff, awg = 0, 0, 0, 0
+		lp = 100000 * time.Second
+	}
+
 	return &Controller{
-		Enabled: true,
-		c: pid.Controller{
-			Config: pid.ControllerConfig{
-				ProportionalGain: kp,
-				IntegralGain:     ki,
-				DerivativeGain:   kd,
+		Enabled:  true,
+		MaxLight: maxLight,
+		c: pid.AntiWindupController{
+			Config: pid.AntiWindupControllerConfig{
+				ProportionalGain:    kp,
+				IntegralGain:        ki,
+				DerivativeGain:      kd,
+				AntiWindUpGain:      awg,
+				LowPassTimeConstant: lp,
+				MaxOutput:           max,
+				MinOutput:           min,
 			},
 		},
-		peak: peak,
+		feedForwardGain: ff,
+		interval:        interval,
+		tuning:          tuning,
+		tuningAmp:       tuneAmp,
+		tuningBase:      tuneBase,
 	}
 }
 
-func (c *Controller) GetController(lightChan <-chan uint64) (<-chan ControllerState, func(), func() error) {
+func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan float64) (<-chan ControllerState, func(), func() error) {
 	stateOutput := make(chan ControllerState, 1)
 
 	return stateOutput, c.c.Reset, func() error {
-		emaScaleFactor := 100.0
-		lightScaleFactor := 10.0
-		lightScale := 100.0 / c.peak
+		// Normalize light readings
 		lastReading := 0.0
+		lastTemp := 0.0
 		lastTime := time.Now()
 
-		// Exponential moving average
-		// alpha = 2/(N+1), 30 samples = 0.064516129
-		ema := ewma.NewMovingAverage(30)
+		// Average light
+		l := swma.NewSlidingWindow(6)
 
-		slog.Debug("starting PID controller loop", "kp", c.c.Config.ProportionalGain, "ki", c.c.Config.IntegralGain, "kd", c.c.Config.DerivativeGain, "module", "cmhpid")
+		// Average temperature
+		t := swma.NewSlidingWindow(6)
+
+		// Average output
+		//o := swma.NewSlidingWindow(3)
+
+		// Tuning
+		periods := make([]float64, 0, 10)
+		tuningPeak := 0.0
+		peakTime := time.Now()
+		lastPeakTime := time.Now()
+
+		firstLoop := true
+
+		slog.Info("starting PID controller loop", "kp", c.c.Config.ProportionalGain, "ki", c.c.Config.IntegralGain, "kd", c.c.Config.DerivativeGain, "module", "cmhpid")
 		for light := range lightChan {
 			slog.Debug("pid received light reading", "light", light, "module", "cmhpid")
+			temp := <-tempChan
+			slog.Debug("pid received temperature reading", "temp", temp, "module", "cmhpid")
+
+			if firstLoop {
+				lastReading = float64(light)
+				lastTemp = temp
+				tuningPeak = temp
+			}
 
 			now := time.Now()
 			elapsed := now.Sub(lastTime)
 			lastTime = now
 			slog.Debug("elapsed time since last cycle", "elapsed", elapsed, "module", "cmhpid")
 
-			reading := float64(light)
-			diff := (reading - lastReading) * lightScale * lightScaleFactor
-			slog.Debug("light differences", "current", reading, "last", lastReading, "module", "cmhpid")
-			slog.Debug("total difference", "diff", diff, "module", "cmhpid")
+			// Light sliding window moving average
+			l.Add(light)
+			reading := l.Average()
+
+			diff := (reading - lastReading) / (c.MaxLight / 100.0)
+			slog.Debug("light difference", "current", reading, "last", lastReading, "scale", (c.MaxLight / 100.0), "diff", diff, "module", "cmhpid")
 			lastReading = reading
-			ema.Add(diff)
-			slog.Debug("exponential moving average", "ema", ema.Value(), "scaleFactor", emaScaleFactor, "module", "cmhpid")
 
-			signalInput := (ema.Value() * emaScaleFactor)
+			// Temperature sliding window moving average
+			t.Add(temp)
+			temp = t.Average()
 
-			c.c.Update(pid.ControllerInput{
-				// Target value
-				ReferenceSignal:  0.0,
-				ActualSignal:     signalInput,
-				SamplingInterval: elapsed,
+			tempDiff := (temp - lastTemp)
+			slog.Debug("temp difference", "tempDiff", tempDiff, "module", "cmhpid")
+			lastTemp = temp
+			feedForward := c.feedForwardGain * tempDiff / float64(elapsed.Seconds())
+			slog.Debug("feed forward", "feedForward", feedForward, "feedForwardGain", c.feedForwardGain, "elapsed", elapsed.Seconds(), "module", "cmhpid")
+
+			if c.tuning {
+				if temp < tuningPeak {
+					tuningPeak = temp
+					peakTime = now
+				}
+				if temp-tuningPeak > c.tuningAmp && !firstLoop {
+					tuningPeriod := peakTime.Sub(lastPeakTime)
+					periods = append(periods, float64(tuningPeriod.Seconds()))
+					lastPeakTime = peakTime
+					slog.Info("found tuning peak", "median", median(periods), "Tu", tuningPeriod.Seconds(), "Ku", c.c.Config.ProportionalGain, "peak", tuningPeak, "temp", temp, "module", "cmhpid")
+					tuningPeak = 50.0
+				}
+			}
+
+			sign := 1.0
+			if diff < 0 {
+				sign = -1.0
+			}
+			diff = diff * 10
+
+			signalInput := math.Pow(1+math.Abs(diff), 2) * sign
+			slog.Debug("pid signal input", "diff", diff, "signalInput", signalInput, "module", "cmhpid")
+
+			c.c.Update(pid.AntiWindupControllerInput{
+				// Reference (target) is 0 change in light output
+				ReferenceSignal: 0.0,
+				ActualSignal:    signalInput,
+				// Feed Forward is intended to compensate for the delay in response by predicting future signal behavior
+				// Mirror temperature leads light output by a few seconds so using the temperature derivative here
+				// helps compensate, allowing the PID to react to the change in light output before it happens
+				FeedForwardSignal: feedForward,
+				SamplingInterval:  elapsed,
 			})
 
-			// Limit output to -100% and +3% to avoid overheating
-			signal := math.Max(-100.0, math.Min(3.0, c.c.State.ControlSignal))
-			slog.Debug("pid control signal", "control", c.c.State.ControlSignal, "signal", signal, "module", "cmhpid")
+			// Add base-level cooling required to keep a stable temperature during tuning
+			controlSignal := c.c.State.ControlSignal
+			if c.tuning {
+				controlSignal += c.tuningBase
+			}
+
+			/*
+				// Output sliding window moving average
+				//controlSignal = math.Max(c.c.Config.MinOutput, math.Min(c.c.Config.MaxOutput, controlSignal))
+				o.Add(controlSignal)
+				controlSignal = o.Average()
+			*/
+
+			slog.Debug("pid control signal", "controlSignal", c.c.State.ControlSignal, "tuningBase", c.tuningBase, "module", "cmhpid")
 			stateOutput <- ControllerState{
 				LightDiff:              diff,
+				TempDiff:               tempDiff,
 				ControlError:           c.c.State.ControlError,
 				ControlErrorIntegral:   c.c.State.ControlErrorIntegral,
 				ControlErrorDerivative: c.c.State.ControlErrorDerivative,
-				ControlSignal:          c.c.State.ControlSignal,
-				Signal:                 signal,
+				ControlSignal:          controlSignal,
+				FeedForward:            feedForward,
+				SignalInput:            signalInput,
 			}
 			slog.Debug("pid control signal published", "module", "cmhpid")
+
+			firstLoop = false
 		}
 		return nil
 	}
+}
+
+func (p *Controller) SetIntegral(integral float64) {
+	p.c.State.ControlErrorIntegral = integral
 }
 
 func (p *ControllerState) String() string {
@@ -104,4 +199,23 @@ func (p *ControllerState) String() string {
 		slog.Error("json marshal error", "error", err, "module", "cmhpid", "state", p)
 	}
 	return string(out)
+}
+
+func median(data []float64) float64 {
+	dataCopy := make([]float64, len(data))
+	copy(dataCopy, data)
+
+	sort.Float64s(dataCopy)
+
+	var median float64
+	l := len(dataCopy)
+	if l == 0 {
+		return 0
+	} else if l%2 == 0 {
+		median = (dataCopy[l/2-1] + dataCopy[l/2]) / 2
+	} else {
+		median = dataCopy[l/2]
+	}
+
+	return median
 }

@@ -13,6 +13,7 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/mikesmitty/chilly-boy/pkg/cmhpid"
+	"github.com/mikesmitty/chilly-boy/pkg/env"
 )
 
 type Client struct {
@@ -50,15 +51,20 @@ func NewClient(broker *url.URL) *Client {
 	return c
 }
 
-func (c *Client) GetPublisher(tempChan <-chan float64, lightChan <-chan uint64, pidChan <-chan cmhpid.ControllerState) func() error {
+func (c *Client) GetPublisher(tempChan <-chan float64, lightChan <-chan float64, pidChan <-chan cmhpid.ControllerState, refChan <-chan env.Env) func() error {
 	tempTopic := c.topicPrefix + "/mirror_temperature"
 	lightTopic := c.topicPrefix + "/mirror_infrared_light"
 	pidTopicDiffLight := c.topicPrefix + "/mirror_pid_light_diff"
-	//pidTopicDiffTemp := c.topicPrefix + "/mirror_pid_temp_diff"
+	pidTopicDiffTemp := c.topicPrefix + "/mirror_pid_temp_diff"
+	pidTopicFeedForward := c.topicPrefix + "/mirror_pid_feed_forward"
 	pidTopicError := c.topicPrefix + "/mirror_pid_error"
 	pidTopicIntegral := c.topicPrefix + "/mirror_pid_integral"
 	pidTopicDerivative := c.topicPrefix + "/mirror_pid_derivative"
 	pidTopicSignal := c.topicPrefix + "/mirror_pid_signal"
+	pidTopicSignalInput := c.topicPrefix + "/mirror_pid_signal_input"
+	refTopicTemp := c.topicPrefix + "/mirror_reference_temperature"
+	refTopicHumidity := c.topicPrefix + "/mirror_reference_humidity"
+	refTopicDewpoint := c.topicPrefix + "/mirror_reference_dewpoint"
 	return func() error {
 		go func() {
 			for {
@@ -68,15 +74,21 @@ func (c *Client) GetPublisher(tempChan <-chan float64, lightChan <-chan uint64, 
 					c.Publish(tempTopic, strconv.FormatFloat(temp, 'f', -1, 64))
 				case light := <-lightChan:
 					slog.Debug("mqtt publishing", "field", "light", "value", light, "topic", lightTopic, "module", "cmhmqtt")
-					c.Publish(lightTopic, strconv.FormatUint(light, 10))
+					c.Publish(lightTopic, strconv.FormatFloat(light, 'f', 2, 64))
 				case pid := <-pidChan:
 					slog.Debug("mqtt publishing", "field", "pid state", "value", pid, "module", "cmhmqtt")
 					c.Publish(pidTopicDiffLight, strconv.FormatFloat(pid.LightDiff, 'f', 2, 64))
-					//c.Publish(pidTopicDiffTemp, strconv.FormatFloat(pid.TempDiff, 'f', 2, 64))
+					c.Publish(pidTopicDiffTemp, strconv.FormatFloat(pid.TempDiff, 'f', 2, 64))
+					c.Publish(pidTopicFeedForward, strconv.FormatFloat(pid.FeedForward, 'f', 2, 64))
 					c.Publish(pidTopicError, strconv.FormatFloat(pid.ControlError, 'f', 2, 64))
 					c.Publish(pidTopicIntegral, strconv.FormatFloat(pid.ControlErrorIntegral, 'f', 2, 64))
 					c.Publish(pidTopicDerivative, strconv.FormatFloat(pid.ControlErrorDerivative, 'f', 2, 64))
-					c.Publish(pidTopicSignal, strconv.FormatFloat(pid.Signal, 'f', 2, 64))
+					c.Publish(pidTopicSignal, strconv.FormatFloat(pid.ControlSignal, 'f', 2, 64))
+					c.Publish(pidTopicSignalInput, strconv.FormatFloat(pid.SignalInput, 'f', 2, 64))
+				case ref := <-refChan:
+					c.Publish(refTopicTemp, strconv.FormatFloat(ref.Temperature, 'f', 2, 64))
+					c.Publish(refTopicHumidity, strconv.FormatFloat(ref.Humidity, 'f', 2, 64))
+					c.Publish(refTopicDewpoint, strconv.FormatFloat(ref.Dewpoint, 'f', 2, 64))
 				}
 			}
 		}()

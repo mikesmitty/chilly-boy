@@ -29,10 +29,11 @@ func (f *Fan[T]) Subscribe(client string) <-chan T {
 	if f.debug {
 		slog.Debug("subscribing to fan", "fan", f.name, "client", client)
 	}
+	f.mu.Lock()
 	if _, ok := f.outputs[client]; ok {
+		f.mu.Unlock()
 		panic("client already subscribed")
 	}
-	f.mu.Lock()
 	defer f.mu.Unlock()
 	c := make(chan T, 1)
 	f.outputs[client] = c
