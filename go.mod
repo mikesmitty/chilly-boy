@@ -6,6 +6,7 @@ require (
 	github.com/JenswBE/golang-tsl2591 v0.0.0-20230415120237-14a517a709e8
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/mikesmitty/max31865 v0.3.1
+	github.com/mikesmitty/pidcalc v0.1.0
 	github.com/mikesmitty/sht4x v0.1.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2

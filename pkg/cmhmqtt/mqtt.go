@@ -51,9 +51,10 @@ func NewClient(broker *url.URL) *Client {
 	return c
 }
 
-func (c *Client) GetPublisher(tempChan <-chan float64, lightChan <-chan float64, pidChan <-chan cmhpid.ControllerState, refChan <-chan env.Env) func() error {
+func (c *Client) GetPublisher(tempChan, lightChan, dutyChan <-chan float64, pidChan <-chan cmhpid.ControllerState, refChan <-chan env.Env) func() error {
 	tempTopic := c.topicPrefix + "/mirror_temperature"
 	lightTopic := c.topicPrefix + "/mirror_infrared_light"
+	dutyCycleTopic := c.topicPrefix + "/mirror_duty_cycle"
 	pidTopicDiffLight := c.topicPrefix + "/mirror_pid_light_diff"
 	pidTopicDiffTemp := c.topicPrefix + "/mirror_pid_temp_diff"
 	pidTopicFeedForward := c.topicPrefix + "/mirror_pid_feed_forward"
@@ -70,13 +71,16 @@ func (c *Client) GetPublisher(tempChan <-chan float64, lightChan <-chan float64,
 			for {
 				select {
 				case temp := <-tempChan:
-					slog.Debug("mqtt publishing", "field", "rtd", "value", temp, "topic", tempTopic, "module", "cmhmqtt")
+					slog.Debug("mqtt publishing", "field", "rtd", "value", temp, "topic", tempTopic)
 					c.Publish(tempTopic, strconv.FormatFloat(temp, 'f', -1, 64))
 				case light := <-lightChan:
-					slog.Debug("mqtt publishing", "field", "light", "value", light, "topic", lightTopic, "module", "cmhmqtt")
+					slog.Debug("mqtt publishing", "field", "light", "value", light, "topic", lightTopic)
 					c.Publish(lightTopic, strconv.FormatFloat(light, 'f', 2, 64))
+				case duty := <-dutyChan:
+					slog.Debug("mqtt publishing", "field", "duty", "value", duty, "topic", dutyCycleTopic)
+					c.Publish(dutyCycleTopic, strconv.FormatFloat(duty, 'f', 2, 64))
 				case pid := <-pidChan:
-					slog.Debug("mqtt publishing", "field", "pid state", "value", pid, "module", "cmhmqtt")
+					slog.Debug("mqtt publishing", "field", "pid state", "value", pid)
 					c.Publish(pidTopicDiffLight, strconv.FormatFloat(pid.LightDiff, 'f', 2, 64))
 					c.Publish(pidTopicDiffTemp, strconv.FormatFloat(pid.TempDiff, 'f', 2, 64))
 					c.Publish(pidTopicFeedForward, strconv.FormatFloat(pid.FeedForward, 'f', 2, 64))

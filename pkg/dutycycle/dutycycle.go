@@ -2,24 +2,33 @@ package dutycycle
 
 import (
 	"log/slog"
+	"math"
+	"strconv"
 
 	"github.com/mikesmitty/chilly-boy/pkg/cmhpid"
+	"github.com/mikesmitty/chilly-boy/pkg/swma"
 )
 
-func NewDutyCycle(input <-chan cmhpid.ControllerState) func() error {
-	return func() error {
-		buf := make([]float64, 600)
-		total := 0.0
+func NewDutyCycle(input <-chan cmhpid.ControllerState) (<-chan float64, func() error) {
+	output := make(chan float64)
+	return output, func() error {
+		freq := 10
+		size := 600
+		swma := swma.NewSlidingWindow(size)
+
+		avg := 0.0
 		i := 0
 		for v := range input {
-			total := total - buf[i] + v.ControlSignal
-			slog.Info("duty cycle", "value", total/600)
-
-			buf[i] = v.ControlSignal
-			i++
-			if i == len(buf) {
-				i = 0
+			signal := math.Max(-math.MaxFloat64, math.Min(math.MaxFloat64, v.ControlSignal))
+			if !math.IsInf(signal, 0) && !math.IsNaN(signal) {
+				avg = swma.Add(signal)
 			}
+			if i%freq == 0 {
+				slog.Debug("duty cycle", "average", strconv.FormatFloat(avg, 'f', 2, 64))
+				output <- avg
+			}
+			i++
+			i = i % size
 		}
 		return nil
 	}

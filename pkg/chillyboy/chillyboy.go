@@ -16,6 +16,7 @@ import (
 	"github.com/mikesmitty/chilly-boy/pkg/cmhpid"
 	sht "github.com/mikesmitty/chilly-boy/pkg/cmhsht4x"
 	tsl "github.com/mikesmitty/chilly-boy/pkg/cmhtsl2591"
+	"github.com/mikesmitty/chilly-boy/pkg/dutycycle"
 	"github.com/mikesmitty/chilly-boy/pkg/env"
 	"github.com/mikesmitty/chilly-boy/pkg/hbridge"
 	"github.com/mikesmitty/chilly-boy/pkg/router"
@@ -112,16 +113,10 @@ func Root() func(cmd *cobra.Command, args []string) {
 			kp = viper.GetFloat64("pid-tune-kp")
 			tuneAmp = viper.GetFloat64("pid-tune-amp")
 			tuneBase = viper.GetFloat64("pid-tune-base")
-		case viper.GetString("pid-algo") != "":
+		default:
 			ku := viper.GetFloat64("pid-ku")
 			tu := viper.GetDuration("pid-tu").Seconds()
 			algorithm := viper.GetString("pid-algo")
-			kp, ki, kd, err = cmhpid.CalculatePID(ku, tu, kp, ki, kd, algorithm)
-			errChk(err)
-			// Feed Forward, Anti-Windup Gain
-			ff = viper.GetFloat64("pid-ff")
-			awg = viper.GetFloat64("pid-awg")
-		default:
 			// Traditional PID gains
 			kp = viper.GetFloat64("pid-kp")
 			ki = viper.GetFloat64("pid-ki")
@@ -129,6 +124,8 @@ func Root() func(cmd *cobra.Command, args []string) {
 			// Feed Forward, Anti-Windup Gain
 			ff = viper.GetFloat64("pid-ff")
 			awg = viper.GetFloat64("pid-awg")
+			kp, ki, kd, err = cmhpid.CalculatePID(ku, tu, kp, ki, kd, algorithm)
+			errChk(err)
 		}
 
 		// Ensure pidMin is always negative
@@ -175,20 +172,23 @@ func Root() func(cmd *cobra.Command, args []string) {
 			}
 		}()
 
+		// Duty Cycle
+		dutyCh, dutyCycle := dutycycle.NewDutyCycle(pidFan.Subscribe("dutycycle"))
+		dutyFan := router.NewFan[float64]("dutycycle", dutyCh)
+		g.Go(dutyCycle)
+		g.Go(dutyFan.Run)
+
 		// MQTT
 		mqttUrl, err := url.Parse(viper.GetString("mqtt-broker"))
 		errChk(err)
 		mc := mqtt.NewClient(mqttUrl)
-		g.Go(mc.GetPublisher(rtdFan.Subscribe("mqtt"), lightFan.Subscribe("mqtt"), pidFan.Subscribe("mqtt"), refFan.Subscribe("mqtt")))
+		g.Go(mc.GetPublisher(rtdFan.Subscribe("mqtt"), lightFan.Subscribe("mqtt"), dutyFan.Subscribe("mqtt"), pidFan.Subscribe("mqtt"), refFan.Subscribe("mqtt")))
 		// Publish/handle the mirror-enable switch
 		g.Go(mc.SwitchFn("mirror-enable", hb.Enable, hb.Disable, hb.GetEnable))
 
 		// Watchdog
 		watchdogTimeout := viper.GetDuration("watchdog-timeout")
 		g.Go(watchdog.NewWatchdog(watchdogTimeout, hb.Stop, lightFan.Subscribe("watchdog")))
-
-		// Duty Cycle
-		//g.Go(dutycycle.NewDutyCycle(pidFan.Subscribe("dutycycle")))
 
 		// Signal handling
 		chanSignal := make(chan os.Signal, 1)

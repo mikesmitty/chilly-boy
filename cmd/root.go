@@ -50,7 +50,7 @@ func init() {
 	rootCmd.PersistentFlags().Float64("pid-ku", 0.0, "PID Ku")
 	rootCmd.PersistentFlags().Float64("pid-tu", 0.0, "PID Tu")
 	rootCmd.PersistentFlags().Float64("pid-tune-kp", 0.0, "begin PID tuning with this Kp gain value")
-	rootCmd.PersistentFlags().Float64("pid-tune-amp", 0.25, "minimum oscillation amplitude for PID tuning")
+	rootCmd.PersistentFlags().Float64("pid-tune-amp", 0.0, "minimum oscillation amplitude for PID tuning")
 	rootCmd.PersistentFlags().Float64("pid-tune-base", 20.0, "baseline cooling level for PID tuning")
 	rootCmd.PersistentFlags().Float64("pid-kp", 0.0, "PID Kp")
 	rootCmd.PersistentFlags().Float64("pid-ki", 0.0, "PID Ki")

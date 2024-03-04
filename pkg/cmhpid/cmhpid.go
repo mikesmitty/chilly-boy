@@ -36,8 +36,7 @@ type ControllerState struct {
 
 func NewController(tuning bool, tuneAmp, tuneBase, kp, ki, kd, ff, awg, min, max, maxLight float64, lp, interval time.Duration) *Controller {
 	if tuning {
-		ki, kd, ff, awg = 0, 0, 0, 0
-		lp = 100000 * time.Second
+		ki, kd = 0, 0
 	}
 
 	return &Controller{
@@ -66,19 +65,15 @@ func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan flo
 	stateOutput := make(chan ControllerState, 1)
 
 	return stateOutput, c.c.Reset, func() error {
-		// Normalize light readings
 		lastReading := 0.0
 		lastTemp := 0.0
 		lastTime := time.Now()
 
 		// Average light
-		l := swma.NewSlidingWindow(6)
+		l := swma.NewSlidingWindow(3)
 
 		// Average temperature
-		t := swma.NewSlidingWindow(6)
-
-		// Average output
-		//o := swma.NewSlidingWindow(3)
+		t := swma.NewSlidingWindow(3)
 
 		// Tuning
 		periods := make([]float64, 0, 10)
@@ -123,7 +118,7 @@ func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan flo
 			feedForward := c.feedForwardGain * tempDiff / float64(elapsed.Seconds())
 			slog.Debug("feed forward", "feedForward", feedForward, "feedForwardGain", c.feedForwardGain, "elapsed", elapsed.Seconds(), "module", "cmhpid")
 
-			if c.tuning {
+			if c.tuning && c.tuningAmp > 0 {
 				if temp < tuningPeak {
 					tuningPeak = temp
 					peakTime = now
@@ -162,13 +157,6 @@ func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan flo
 			if c.tuning {
 				controlSignal += c.tuningBase
 			}
-
-			/*
-				// Output sliding window moving average
-				//controlSignal = math.Max(c.c.Config.MinOutput, math.Min(c.c.Config.MaxOutput, controlSignal))
-				o.Add(controlSignal)
-				controlSignal = o.Average()
-			*/
 
 			slog.Debug("pid control signal", "controlSignal", c.c.State.ControlSignal, "tuningBase", c.tuningBase, "module", "cmhpid")
 			stateOutput <- ControllerState{

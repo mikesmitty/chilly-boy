@@ -29,6 +29,8 @@ github.com/magiconair/properties v1.8.7 h1:IeQXZAiQcpL9mgcAe1Nu6cX9LLw6ExEHKjN0V
 github.com/magiconair/properties v1.8.7/go.mod h1:Dhd985XPs7jluiymwWYZ0G4Z61jb3vdS329zhj2hYo0=
 github.com/mikesmitty/max31865 v0.3.1 h1:BeScGhNjkQ3HYABRb+DpujZ+9zOdWEIJ4sqc5SKpgOg=
 github.com/mikesmitty/max31865 v0.3.1/go.mod h1:532YPq9WIUpdie6eOMwMvxUfMzTaAkKShBBVjffRWg0=
+github.com/mikesmitty/pidcalc v0.1.0 h1:PUAAW/JakX8ZK350OvSwmM4LOs8Hb0bKAYFhgcAkz44=
+github.com/mikesmitty/pidcalc v0.1.0/go.mod h1:LiEYSTjp3BkY2o+fiM1TNvHlwQIvsoce+1dGcKI4OxQ=
 github.com/mikesmitty/sht4x v0.1.0 h1:QX50IRh1oNTLgLKmzUgnezM+1uf+OkBGNuA/PzyFRsE=
 github.com/mikesmitty/sht4x v0.1.0/go.mod h1:LWNy4j4001SjSDb417rI7FpAh5I99oaoydtXheejUQ0=
 github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
