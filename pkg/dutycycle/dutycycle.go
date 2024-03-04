@@ -12,7 +12,7 @@ import (
 func NewDutyCycle(input <-chan cmhpid.ControllerState) (<-chan float64, func() error) {
 	output := make(chan float64)
 	return output, func() error {
-		freq := 10
+		freq := 1
 		size := 600
 		swma := swma.NewSlidingWindow(size)
 

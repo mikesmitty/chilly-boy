@@ -180,8 +180,9 @@ func Root() func(cmd *cobra.Command, args []string) {
 
 		// MQTT
 		mqttUrl, err := url.Parse(viper.GetString("mqtt-broker"))
+		mqttSampleInterval := viper.GetInt("mqtt-sample-interval")
 		errChk(err)
-		mc := mqtt.NewClient(mqttUrl)
+		mc := mqtt.NewClient(mqttUrl, mqttSampleInterval)
 		g.Go(mc.GetPublisher(rtdFan.Subscribe("mqtt"), lightFan.Subscribe("mqtt"), dutyFan.Subscribe("mqtt"), pidFan.Subscribe("mqtt"), refFan.Subscribe("mqtt")))
 		// Publish/handle the mirror-enable switch
 		g.Go(mc.SwitchFn("mirror-enable", hb.Enable, hb.Disable, hb.GetEnable))

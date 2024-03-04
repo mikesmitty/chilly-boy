@@ -17,13 +17,14 @@ import (
 )
 
 type Client struct {
-	client      mqtt.Client
-	topicPrefix string
-	qos         byte
-	retained    bool
+	client         mqtt.Client
+	topicPrefix    string
+	qos            byte
+	retained       bool
+	sampleInterval int
 }
 
-func NewClient(broker *url.URL) *Client {
+func NewClient(broker *url.URL, sampleInterval int) *Client {
 	c := &Client{}
 
 	var urls []*url.URL
@@ -48,6 +49,8 @@ func NewClient(broker *url.URL) *Client {
 		ConnectTimeout: 30 * time.Second,
 	})
 
+	c.sampleInterval = sampleInterval
+
 	return c
 }
 
@@ -66,20 +69,41 @@ func (c *Client) GetPublisher(tempChan, lightChan, dutyChan <-chan float64, pidC
 	refTopicTemp := c.topicPrefix + "/mirror_reference_temperature"
 	refTopicHumidity := c.topicPrefix + "/mirror_reference_humidity"
 	refTopicDewpoint := c.topicPrefix + "/mirror_reference_dewpoint"
+	i, j, k, l, m := 0, 0, 0, 0, 0
 	return func() error {
 		go func() {
 			for {
 				select {
 				case temp := <-tempChan:
+					i++
+					if i%c.sampleInterval != 0 {
+						continue
+					}
+					i = 0
 					slog.Debug("mqtt publishing", "field", "rtd", "value", temp, "topic", tempTopic)
 					c.Publish(tempTopic, strconv.FormatFloat(temp, 'f', -1, 64))
 				case light := <-lightChan:
+					j++
+					if j%c.sampleInterval != 0 {
+						continue
+					}
+					j = 0
 					slog.Debug("mqtt publishing", "field", "light", "value", light, "topic", lightTopic)
 					c.Publish(lightTopic, strconv.FormatFloat(light, 'f', 2, 64))
 				case duty := <-dutyChan:
+					k++
+					if k%c.sampleInterval != 0 {
+						continue
+					}
+					k = 0
 					slog.Debug("mqtt publishing", "field", "duty", "value", duty, "topic", dutyCycleTopic)
 					c.Publish(dutyCycleTopic, strconv.FormatFloat(duty, 'f', 2, 64))
 				case pid := <-pidChan:
+					l++
+					if l%c.sampleInterval != 0 {
+						continue
+					}
+					l = 0
 					slog.Debug("mqtt publishing", "field", "pid state", "value", pid)
 					c.Publish(pidTopicDiffLight, strconv.FormatFloat(pid.LightDiff, 'f', 2, 64))
 					c.Publish(pidTopicDiffTemp, strconv.FormatFloat(pid.TempDiff, 'f', 2, 64))
@@ -90,6 +114,11 @@ func (c *Client) GetPublisher(tempChan, lightChan, dutyChan <-chan float64, pidC
 					c.Publish(pidTopicSignal, strconv.FormatFloat(pid.ControlSignal, 'f', 2, 64))
 					c.Publish(pidTopicSignalInput, strconv.FormatFloat(pid.SignalInput, 'f', 2, 64))
 				case ref := <-refChan:
+					m++
+					if m%c.sampleInterval != 0 {
+						continue
+					}
+					m = 0
 					c.Publish(refTopicTemp, strconv.FormatFloat(ref.Temperature, 'f', 2, 64))
 					c.Publish(refTopicHumidity, strconv.FormatFloat(ref.Humidity, 'f', 2, 64))
 					c.Publish(refTopicDewpoint, strconv.FormatFloat(ref.Dewpoint, 'f', 2, 64))
