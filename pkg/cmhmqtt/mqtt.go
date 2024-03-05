@@ -14,6 +14,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/mikesmitty/chilly-boy/pkg/cmhpid"
 	"github.com/mikesmitty/chilly-boy/pkg/env"
+	"github.com/mikesmitty/chilly-boy/pkg/swma"
 )
 
 type Client struct {
@@ -21,10 +22,11 @@ type Client struct {
 	topicPrefix    string
 	qos            byte
 	retained       bool
+	tempAvg        *swma.SlidingWindow
 	sampleInterval int
 }
 
-func NewClient(broker *url.URL, sampleInterval int) *Client {
+func NewClient(broker *url.URL, sampleInterval int, pidInterval time.Duration) *Client {
 	c := &Client{}
 
 	var urls []*url.URL
@@ -51,11 +53,16 @@ func NewClient(broker *url.URL, sampleInterval int) *Client {
 
 	c.sampleInterval = sampleInterval
 
+	// 1 minute sliding window average of the mirror temp/dewpoint
+	windowSize := int(1 * time.Minute / pidInterval)
+	c.tempAvg = swma.NewSlidingWindow(windowSize)
+
 	return c
 }
 
 func (c *Client) GetPublisher(tempChan, lightChan, dutyChan <-chan float64, pidChan <-chan cmhpid.ControllerState, refChan <-chan env.Env) func() error {
 	tempTopic := c.topicPrefix + "/mirror_temperature"
+	dewpointTopic := c.topicPrefix + "/dewpoint"
 	lightTopic := c.topicPrefix + "/mirror_infrared_light"
 	dutyCycleTopic := c.topicPrefix + "/mirror_duty_cycle"
 	pidTopicDiffLight := c.topicPrefix + "/mirror_pid_light_diff"
@@ -69,17 +76,21 @@ func (c *Client) GetPublisher(tempChan, lightChan, dutyChan <-chan float64, pidC
 	refTopicTemp := c.topicPrefix + "/mirror_reference_temperature"
 	refTopicHumidity := c.topicPrefix + "/mirror_reference_humidity"
 	refTopicDewpoint := c.topicPrefix + "/mirror_reference_dewpoint"
+
 	i, j, k, l, m := 0, 0, 0, 0, 0
 	return func() error {
 		go func() {
 			for {
 				select {
 				case temp := <-tempChan:
+					avgTemp := c.tempAvg.Add(temp)
 					i++
 					if i%c.sampleInterval != 0 {
 						continue
 					}
 					i = 0
+					slog.Debug("mqtt publishing", "field", "dewpoint", "value", avgTemp, "topic", dewpointTopic)
+					c.Publish(dewpointTopic, strconv.FormatFloat(avgTemp, 'f', -1, 64))
 					slog.Debug("mqtt publishing", "field", "rtd", "value", temp, "topic", tempTopic)
 					c.Publish(tempTopic, strconv.FormatFloat(temp, 'f', -1, 64))
 				case light := <-lightChan:
