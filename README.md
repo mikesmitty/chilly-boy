@@ -1,2 +1,2 @@
 # chilly-boy
-Open Source Chilled Mirror Hygrometer
+Open Source Chilled Mirror Hygrometer Project
