@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/mikesmitty/chilly-boy/compare/v0.3.1...v0.4.0) (2024-03-12)
+
+
+### Features
+
+* add reference temp sensor and update pid exponential diff ([e37fb08](https://github.com/mikesmitty/chilly-boy/commit/e37fb08d7261a2e5ad5ce211fbee33e4234edbf1))
+
 ## [0.3.1](https://github.com/mikesmitty/chilly-boy/compare/v0.3.0...v0.3.1) (2024-03-05)
 
 
