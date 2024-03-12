@@ -16,6 +16,7 @@ import (
 	"github.com/mikesmitty/chilly-boy/pkg/cmhpid"
 	sht "github.com/mikesmitty/chilly-boy/pkg/cmhsht4x"
 	tsl "github.com/mikesmitty/chilly-boy/pkg/cmhtsl2591"
+	"github.com/mikesmitty/chilly-boy/pkg/dewpoint"
 	"github.com/mikesmitty/chilly-boy/pkg/dutycycle"
 	"github.com/mikesmitty/chilly-boy/pkg/env"
 	"github.com/mikesmitty/chilly-boy/pkg/hbridge"
@@ -65,10 +66,15 @@ func Root() func(cmd *cobra.Command, args []string) {
 		errChk(err)
 
 		rtdCh, rtdFn := max.TemperatureChannel(ctx, rtdDev, pidInterval)
-		slog.Debug("Starting RTD")
+		slog.Debug("starting rtd")
 		g.Go(rtdFn)
 		rtdFan := router.NewFan[float64]("rtd", rtdCh)
 		g.Go(rtdFan.Run)
+
+		dewptCh, rtdFn := dewpoint.NewDewpoint(rtdFan.Subscribe("dewpoint"))
+		slog.Debug("starting dewpoint")
+		dewptFan := router.NewFan[float64]("dewpoint", dewptCh)
+		g.Go(dewptFan.Run)
 
 		// TSL2591
 		opts := &tsl2591.Opts{
@@ -177,7 +183,7 @@ func Root() func(cmd *cobra.Command, args []string) {
 		mqttSampleInterval := viper.GetInt("mqtt-sample-interval")
 		errChk(err)
 		mc := mqtt.NewClient(mqttUrl, mqttSampleInterval, pidInterval)
-		g.Go(mc.GetPublisher(rtdFan.Subscribe("mqtt"), lightFan.Subscribe("mqtt"), dutyFan.Subscribe("mqtt"), pidFan.Subscribe("mqtt"), refFan.Subscribe("mqtt")))
+		g.Go(mc.GetPublisher(rtdFan.Subscribe("mqtt"), dewptFan.Subscribe("mqtt"), lightFan.Subscribe("mqtt"), dutyFan.Subscribe("mqtt"), pidFan.Subscribe("mqtt"), refFan.Subscribe("mqtt")))
 		// Publish/handle the mirror-enable switch
 		g.Go(mc.SwitchFn("mirror-enable", hb.Enable, hb.Disable, hb.GetEnable))
 

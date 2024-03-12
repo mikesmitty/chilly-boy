@@ -56,7 +56,7 @@ func NewClient(broker *url.URL, sampleInterval int, pidInterval time.Duration) *
 	return c
 }
 
-func (c *Client) GetPublisher(tempChan, lightChan, dutyChan <-chan float64, pidChan <-chan cmhpid.ControllerState, refChan <-chan env.Env) func() error {
+func (c *Client) GetPublisher(tempChan, dewpointChan, lightChan, dutyChan <-chan float64, pidChan <-chan cmhpid.ControllerState, refChan <-chan env.Env) func() error {
 	tempTopic := c.topicPrefix + "/mirror_temperature"
 	dewpointTopic := c.topicPrefix + "/dewpoint"
 	lightTopic := c.topicPrefix + "/mirror_infrared_light"
