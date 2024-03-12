@@ -71,8 +71,9 @@ func Root() func(cmd *cobra.Command, args []string) {
 		rtdFan := router.NewFan[float64]("rtd", rtdCh)
 		g.Go(rtdFan.Run)
 
-		dewptCh, rtdFn := dewpoint.NewDewpoint(rtdFan.Subscribe("dewpoint"))
+		dewptCh, dewptFn := dewpoint.NewDewpoint(rtdFan.Subscribe("dewpoint"))
 		slog.Debug("starting dewpoint")
+		g.Go(dewptFn)
 		dewptFan := router.NewFan[float64]("dewpoint", dewptCh)
 		g.Go(dewptFan.Run)
 
