@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/mikesmitty/chilly-boy/compare/v0.5.0...v0.5.1) (2024-03-12)
+
+
+### Bug Fixes
+
+* add missing dewpoint functionality ([7822c31](https://github.com/mikesmitty/chilly-boy/commit/7822c31de187f6d1fcb8e4b1b349a055e79b4eb9))
+
 ## [0.5.0](https://github.com/mikesmitty/chilly-boy/compare/v0.4.0...v0.5.0) (2024-03-12)
 
 
