@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/mikesmitty/chilly-boy/compare/v0.4.0...v0.5.0) (2024-03-12)
+
+
+### Features
+
+* add initial dewpoint package ([ef513a6](https://github.com/mikesmitty/chilly-boy/commit/ef513a6d2554af8d461792a80a5d27e464097c34))
+
 ## [0.4.0](https://github.com/mikesmitty/chilly-boy/compare/v0.3.1...v0.4.0) (2024-03-12)
 
 
