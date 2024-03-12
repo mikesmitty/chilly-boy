@@ -2,6 +2,8 @@ module github.com/mikesmitty/chilly-boy
 
 go 1.22.0
 
+toolchain go1.22.1
+
 require (
 	github.com/JenswBE/golang-tsl2591 v0.0.0-20230415120237-14a517a709e8
 	github.com/eclipse/paho.mqtt.golang v1.4.3

@@ -53,10 +53,6 @@ func NewClient(broker *url.URL, sampleInterval int, pidInterval time.Duration) *
 
 	c.sampleInterval = sampleInterval
 
-	// 1 minute sliding window average of the mirror temp/dewpoint
-	windowSize := int(1 * time.Minute / pidInterval)
-	c.tempAvg = swma.NewSlidingWindow(windowSize)
-
 	return c
 }
 
@@ -83,14 +79,13 @@ func (c *Client) GetPublisher(tempChan, lightChan, dutyChan <-chan float64, pidC
 			for {
 				select {
 				case temp := <-tempChan:
-					avgTemp := c.tempAvg.Add(temp)
 					i++
 					if i%c.sampleInterval != 0 {
 						continue
 					}
 					i = 0
-					slog.Debug("mqtt publishing", "field", "dewpoint", "value", avgTemp, "topic", dewpointTopic)
-					c.Publish(dewpointTopic, strconv.FormatFloat(avgTemp, 'f', -1, 64))
+					slog.Debug("mqtt publishing", "field", "dewpoint", "value", temp, "topic", dewpointTopic)
+					c.Publish(dewpointTopic, strconv.FormatFloat(temp, 'f', -1, 64))
 					slog.Debug("mqtt publishing", "field", "rtd", "value", temp, "topic", tempTopic)
 					c.Publish(tempTopic, strconv.FormatFloat(temp, 'f', -1, 64))
 				case light := <-lightChan:

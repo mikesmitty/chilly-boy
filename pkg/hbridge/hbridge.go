@@ -2,6 +2,7 @@ package hbridge
 
 import (
 	"log"
+	"log/slog"
 	"sync"
 
 	"periph.io/x/conn/v3/gpio"
@@ -24,20 +25,36 @@ func NewHBridge(pinA, pinB, enablePinA, enablePinB string) *HBridge {
 	if pA == nil {
 		log.Fatal("Failed to find pinA")
 	}
+	err := pA.Out(gpio.Low)
+	if err != nil {
+		log.Fatal("Failed to set pinA output to low")
+	}
 
 	pB := gpioreg.ByName(pinB)
 	if pB == nil {
 		log.Fatal("Failed to find pinB")
+	}
+	err = pB.Out(gpio.Low)
+	if err != nil {
+		log.Fatal("Failed to set pinB output to low")
 	}
 
 	eA := gpioreg.ByName(enablePinA)
 	if eA == nil {
 		log.Fatal("Failed to find enablePinA")
 	}
+	err = eA.Out(gpio.High)
+	if err != nil {
+		log.Fatal("Failed to set enablePinA output to low")
+	}
 
 	eB := gpioreg.ByName(enablePinB)
 	if eB == nil {
 		log.Fatal("Failed to find enablePinB")
+	}
+	err = eB.Out(gpio.Low)
+	if err != nil {
+		log.Fatal("Failed to set enablePinB output to low")
 	}
 
 	return &HBridge{
@@ -50,23 +67,38 @@ func NewHBridge(pinA, pinB, enablePinA, enablePinB string) *HBridge {
 }
 
 func (h *HBridge) Control(percent float64) error {
-	if percent > 0 {
-		return h.Cool(percent)
-	} else if percent < 0 {
-		return h.Heat(-percent)
+	h.mu.Lock()
+	if !h.enabled {
+		slog.Debug("control sent when hbridge not enabled", "percent", percent)
+	}
+	h.mu.Unlock()
+	if percent < 0 {
+		return h.Cool(-percent)
+	} else if percent > 0 {
+		return h.Heat(percent)
 	} else {
-		return h.Stop()
+		return h.Cool(0)
 	}
 }
 
 func (h *HBridge) Cool(percent float64) error {
-	h.set(h.pinB, 0.0)
-	return h.set(h.pinA, percent)
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	err := h.set(h.pinA, 0.0)
+	if err != nil {
+		return err
+	}
+	return h.set(h.pinB, percent)
 }
 
 func (h *HBridge) Heat(percent float64) error {
-	h.set(h.pinA, 0.0)
-	return h.set(h.pinB, percent)
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	err := h.set(h.pinB, 0.0)
+	if err != nil {
+		return err
+	}
+	return h.set(h.pinA, percent)
 }
 
 func (h *HBridge) GetEnable() bool {
@@ -79,8 +111,14 @@ func (h *HBridge) Enable() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.enabled = true
-	h.enPinA.Out(gpio.High)
-	h.enPinB.Out(gpio.High)
+	err := h.enPinA.Out(gpio.High)
+	if err != nil {
+		log.Fatal("Failed to set enablePinA output to high")
+	}
+	err = h.enPinB.Out(gpio.High)
+	if err != nil {
+		log.Fatal("Failed to set enablePinA output to high")
+	}
 }
 
 func (h *HBridge) Disable() {
@@ -92,8 +130,20 @@ func (h *HBridge) Disable() {
 }
 
 func (h *HBridge) Stop() error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.enPinA.Out(gpio.Low)
 	h.enPinB.Out(gpio.Low)
+	err := h.set(h.pinA, 0.0)
+	if err != nil {
+		return err
+	}
+	return h.set(h.pinB, 0.0)
+}
+
+func (h *HBridge) HardStop() error {
+	//h.enPinA.Out(gpio.Low)
+	//h.enPinB.Out(gpio.Low)
 	h.set(h.pinA, 0.0)
 	return h.set(h.pinB, 0.0)
 }

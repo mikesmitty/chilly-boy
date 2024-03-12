@@ -136,9 +136,8 @@ func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan flo
 			if diff < 0 {
 				sign = -1.0
 			}
-			diff = diff * 10
 
-			signalInput := math.Pow(1+math.Abs(diff), 2) * sign
+			signalInput := (math.Pow(1+math.Abs(diff), 10) - 1) * sign
 			slog.Debug("pid signal input", "diff", diff, "signalInput", signalInput, "module", "cmhpid")
 
 			c.c.Update(pid.AntiWindupControllerInput{

@@ -112,7 +112,7 @@ func Root() func(cmd *cobra.Command, args []string) {
 			pidTune = true
 			kp = viper.GetFloat64("pid-tune-kp")
 			tuneAmp = viper.GetFloat64("pid-tune-amp")
-			tuneBase = viper.GetFloat64("pid-tune-base")
+			tuneBase = math.Min(viper.GetFloat64("pid-tune-base"), -1*viper.GetFloat64("pid-tune-base"))
 		default:
 			ku := viper.GetFloat64("pid-ku")
 			tu := viper.GetDuration("pid-tu").Seconds()
@@ -128,12 +128,12 @@ func Root() func(cmd *cobra.Command, args []string) {
 			errChk(err)
 		}
 
-		// Ensure pidMin is always negative
-		pidMin := math.Min(viper.GetFloat64("pid-min-output"), -1*viper.GetFloat64("pid-min-output"))
-		pidMax := viper.GetFloat64("pid-max-output")
+		// Ensure maxCool is always negative
+		maxCool := viper.GetFloat64("max-cool")
+		maxHeat := viper.GetFloat64("max-heat")
 		maxLight := viper.GetFloat64("max-light")
 		pidLP := viper.GetDuration("pid-lp")
-		pidCtrl := cmhpid.NewController(pidTune, tuneAmp, tuneBase, kp, ki, kd, ff, awg, pidMin, pidMax, maxLight, pidLP, pidInterval)
+		pidCtrl := cmhpid.NewController(pidTune, tuneAmp, tuneBase, kp, ki, kd, ff, awg, -maxCool, maxHeat, maxLight, pidLP, pidInterval)
 		pidCh, pidReset, controller := pidCtrl.GetController(lightFan.Subscribe("pid"), rtdFan.Subscribe("pid"))
 		slog.Debug("Starting PID controller")
 		g.Go(controller)
@@ -142,30 +142,24 @@ func Root() func(cmd *cobra.Command, args []string) {
 
 		slog.Debug("Starting HBridge control loop")
 		go func() {
-			// Find max light level
 			hb.Enable()
-			maxLight := findMaxLight(lightFan, func() { hb.Control(pidMin) }, func() { hb.Control(pidMax) })
-			pidCtrl.MaxLight = maxLight
-			slog.Info("max light level determined", "maxLight", fmt.Sprintf("%0.0f", maxLight))
+			//hb.Heat(maxHeat)
+			//findMaxLight(lightFan, rtdFan)
+			//maxLight := findMaxLight(lightFan, rtdFan, refFan, func() { hb.Control(pidMin) }, func() { hb.Control(pidMax) })
+			//pidCtrl.MaxLight = maxLight
+			//slog.Info("max light level determined", "maxLight", fmt.Sprintf("%0.0f", maxLight))
 
-			threshold := maxLight * viper.GetFloat64("startup-light-ratio") / 100.0
+			refCh := refFan.Subscribe("hbridge")
+			ref := <-refCh
+			refFan.Unsubscribe("hbridge")
 
-			light := lightFan.Subscribe("hbridge")
-			hb.Control(pidMin)
-			slog.Info("waiting for light to reach threshold", "threshold", fmt.Sprintf("%0.2f", threshold))
-			for l := range light {
-				if l < threshold {
-					slog.Debug("reached light threshold, stopping hbridge")
-					hb.Cool(0.0)
-					pidReset()
-					break
-				}
-			}
+			slog.Info("cooling down to estimated dewpoint", "dewpoint", ref.Dewpoint)
+			hb.Cool(100)
+			initialCooldown(600*time.Second, ref.Dewpoint, rtdFan)
 
-			// Unsubscribe so we don't hang the pid loop
-			lightFan.Unsubscribe("hbridge")
-
-			slog.Info("light threshold reached, starting PID control")
+			hb.Cool(0.0)
+			pidReset()
+			slog.Info("estimated dewpoint reached, starting PID control")
 			for control := range pidFan.Subscribe("hbridge") {
 				slog.Debug("hbridge received control signal", "controlSignal", fmt.Sprintf("%0.3f", control.ControlSignal))
 				hb.Control(control.ControlSignal)
@@ -189,7 +183,7 @@ func Root() func(cmd *cobra.Command, args []string) {
 
 		// Watchdog
 		watchdogTimeout := viper.GetDuration("watchdog-timeout")
-		g.Go(watchdog.NewWatchdog(watchdogTimeout, hb.Stop, lightFan.Subscribe("watchdog")))
+		g.Go(watchdog.NewWatchdog(watchdogTimeout, hb.HardStop, lightFan.Subscribe("watchdog")))
 
 		// Signal handling
 		chanSignal := make(chan os.Signal, 1)
@@ -203,7 +197,7 @@ func Root() func(cmd *cobra.Command, args []string) {
 			}
 			slog.Info("shutting down...")
 			slog.Info("stopping hbridge...")
-			hb.Stop()
+			hb.HardStop()
 			os.Exit(0)
 			return nil
 		})
@@ -221,42 +215,51 @@ func errChk(err error) {
 	}
 }
 
-func findMaxLight(lightFan *router.Fan[float64], chiller func(), heater func()) float64 {
+func findMaxLight(lightFan, tempFan *router.Fan[float64]) float64 {
 	lightCh := lightFan.Subscribe("lightmax")
 	defer lightFan.Unsubscribe("lightmax")
-	initialLight := <-lightCh
-
-	// Cool for up to 90 seconds then heat for 60 seconds to find peak light level
-	chiller()
-	lightMaxCooldown(90*time.Second, lightCh, initialLight)
-	heater()
-	return lightMaxHeatup(60*time.Second, lightCh)
-}
-
-func lightMaxCooldown(timeout time.Duration, lightCh <-chan float64, initialLight float64) {
-	timer := time.NewTimer(timeout)
+	tempCh := tempFan.Subscribe("lightmax")
+	defer tempFan.Unsubscribe("lightmax")
+	var max float64
+	timer := time.NewTimer(900 * time.Second)
+	count := 0
+	limit := 30.0
 	for {
 		select {
 		case <-timer.C:
-			return
+			return max
+		case t := <-tempCh:
+			if t >= limit {
+				slog.Info("temp hit limit, stopping", "temp", t, "limit", limit)
+				return max
+			}
 		case l := <-lightCh:
-			if l < (initialLight * 0.99) {
-				return
+			if l > max {
+				count = 0
+				max = l
+			} else if l <= max {
+				slog.Debug("light less than max", "light", l, "max", max)
+				// Wait 15 seconds to ensure we've peaked
+				count++
+				if count > 150 {
+					return max
+				}
 			}
 		}
 	}
 }
 
-func lightMaxHeatup(timeout time.Duration, lightCh <-chan float64) float64 {
-	var max float64
+func initialCooldown(timeout time.Duration, dewpoint float64, tempFan *router.Fan[float64]) {
+	tempCh := tempFan.Subscribe("initial-cooldown")
+	defer tempFan.Unsubscribe("initial-cooldown")
 	timer := time.NewTimer(timeout)
 	for {
 		select {
 		case <-timer.C:
-			return max
-		case l := <-lightCh:
-			if l > max {
-				max = l
+			return
+		case t := <-tempCh:
+			if t < dewpoint {
+				return
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 package swma
 
 type SlidingWindow struct {
+	first      bool
 	sum        float64
 	window     []float64
 	windowSize int
@@ -14,6 +15,11 @@ func NewSlidingWindow(windowSize int) *SlidingWindow {
 }
 
 func (s *SlidingWindow) Add(value float64) float64 {
+	if s.first && value != 0 {
+		s.Fill(value)
+		s.first = false
+		return value
+	}
 	s.sum += value
 	s.sum -= s.window[0]
 	s.window = append(s.window[1:], value)
@@ -22,6 +28,12 @@ func (s *SlidingWindow) Add(value float64) float64 {
 
 func (s *SlidingWindow) Average() float64 {
 	return s.sum / float64(s.windowSize)
+}
+
+func (s *SlidingWindow) Fill(value float64) {
+	for i := range s.window {
+		s.window[i] = value
+	}
 }
 
 func (s *SlidingWindow) Reset() {
