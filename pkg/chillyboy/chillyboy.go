@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"time"
 
 	tsl2591 "github.com/JenswBE/golang-tsl2591"
 	max "github.com/mikesmitty/chilly-boy/pkg/cmhmax31865"
@@ -135,44 +134,24 @@ func Root() func(cmd *cobra.Command, args []string) {
 			errChk(err)
 		}
 
-		// Ensure maxCool is always negative
+		maxLight := viper.GetFloat64("max-light")
+		lowLight := maxLight * 0.4
+		highLight := maxLight * 0.8
+
 		maxCool := viper.GetFloat64("max-cool")
 		maxHeat := viper.GetFloat64("max-heat")
-		maxLight := viper.GetFloat64("max-light")
 		sigExp := viper.GetFloat64("signal-exponent")
 		pidLP := viper.GetDuration("pid-lp")
 		pidCtrl := cmhpid.NewController(pidTune, tuneAmp, tuneBase, kp, ki, kd, ff, awg, -1*maxCool, maxHeat, sigExp, maxLight, pidLP, pidInterval)
 		pidCh, pidReset, controller := pidCtrl.GetController(lightFan.Subscribe("pid"), rtdFan.Subscribe("pid"))
-		slog.Debug("Starting PID controller")
+		slog.Debug("starting pid controller")
 		g.Go(controller)
 		pidFan := router.NewFan[cmhpid.ControllerState]("pid", pidCh)
 		g.Go(pidFan.Run)
 
-		slog.Debug("Starting HBridge control loop")
-		go func() {
-			hb.Enable()
-			//hb.Heat(maxHeat)
-			//findMaxLight(lightFan, rtdFan)
-			//maxLight := findMaxLight(lightFan, rtdFan, refFan, func() { hb.Control(pidMin) }, func() { hb.Control(pidMax) })
-			//pidCtrl.MaxLight = maxLight
-			//slog.Info("max light level determined", "maxLight", fmt.Sprintf("%0.0f", maxLight))
-
-			refCh := refFan.Subscribe("hbridge")
-			ref := <-refCh
-			refFan.Unsubscribe("hbridge")
-
-			slog.Info("cooling down to estimated dewpoint", "dewpoint", ref.Dewpoint)
-			hb.Cool(100)
-			initialCooldown(600*time.Second, ref.Dewpoint, rtdFan)
-
-			hb.Cool(0.0)
-			pidReset()
-			slog.Info("estimated dewpoint reached, starting PID control")
-			for control := range pidFan.Subscribe("hbridge") {
-				slog.Debug("hbridge received control signal", "controlSignal", fmt.Sprintf("%0.3f", control.ControlSignal))
-				hb.Control(control.ControlSignal)
-			}
-		}()
+		hb.Enable()
+		slog.Debug("starting mirror control loop")
+		go mirrorLoop(ctx, hb, maxCool, lowLight, highLight, lightFan, pidFan, pidReset)
 
 		// Duty Cycle
 		dutyCh, dutyCycle := dutycycle.NewDutyCycle(pidFan.Subscribe("dutycycle"))
@@ -223,50 +202,102 @@ func errChk(err error) {
 	}
 }
 
-func findMaxLight(lightFan, tempFan *router.Fan[float64]) float64 {
-	lightCh := lightFan.Subscribe("lightmax")
-	defer lightFan.Unsubscribe("lightmax")
-	tempCh := tempFan.Subscribe("lightmax")
-	defer tempFan.Unsubscribe("lightmax")
-	var max float64
-	timer := time.NewTimer(900 * time.Second)
-	count := 0
-	limit := 30.0
+func heatCycle(ctx context.Context, heatGoal, lightGoal float64, lightFan, tempFan *router.Fan[float64], refFan *router.Fan[env.Env], coolFn, stopFn, heatFn func() error) error {
+	tempCh := tempFan.Subscribe("maxlight")
+	defer tempFan.Unsubscribe("maxlight")
+	lightCh := lightFan.Subscribe("maxlight")
+	defer lightFan.Unsubscribe("maxlight")
+	refCh := refFan.Subscribe("maxlight")
+	defer refFan.Unsubscribe("maxlight")
+
+	r := <-refCh
+	dewpoint := r.Dewpoint
+	t := <-tempCh
+	if t > dewpoint {
+		slog.Info("begining heat cycle, cooling to dewpoint", "mirror-temp", t, "dewpoint", dewpoint)
+		if err := coolFn(); err != nil {
+			return err
+		}
+	}
+
+	var cooling bool
+	var heating bool
 	for {
 		select {
-		case <-timer.C:
-			return max
+		case <-ctx.Done():
+			return ctx.Err()
+		case r := <-refCh:
+			dewpoint = r.Dewpoint
 		case t := <-tempCh:
-			if t >= limit {
-				slog.Info("temp hit limit, stopping", "temp", t, "limit", limit)
-				return max
+			if !cooling && !heating && t < dewpoint {
+				slog.Info("mirror temperature is below dewpoint, beginning heating", "temp", t, "dewpoint", dewpoint)
+				heating = true
+				if err := heatFn(); err != nil {
+					stopFn()
+					return err
+				}
+				return nil
+			} else if heating && t > heatGoal {
+				slog.Info("mirror reached goal temperature, cooling back down", "temp", t, "goal", heatGoal)
+				cooling = true
+				heating = false
+				if err := coolFn(); err != nil {
+					return err
+				}
 			}
 		case l := <-lightCh:
-			if l > max {
-				count = 0
-				max = l
-			} else if l <= max {
-				slog.Debug("light less than max", "light", l, "max", max)
-				// Wait 15 seconds to ensure we've peaked
-				count++
-				if count > 150 {
-					return max
-				}
+			if cooling && l < lightGoal {
+				slog.Info("light level below goal, heatcycle complete", "light", l, "goal", lightGoal)
+				stopFn()
+				return nil
 			}
 		}
 	}
 }
 
-func initialCooldown(timeout time.Duration, dewpoint float64, tempFan *router.Fan[float64]) {
-	tempCh := tempFan.Subscribe("initial-cooldown")
-	defer tempFan.Unsubscribe("initial-cooldown")
-	timer := time.NewTimer(timeout)
+func cooldown(ctx context.Context, lightGoal float64, lightFan *router.Fan[float64]) {
+	lightCh := lightFan.Subscribe("cooldown")
+	defer lightFan.Unsubscribe("cooldown")
 	for {
 		select {
-		case <-timer.C:
+		case <-ctx.Done():
 			return
-		case t := <-tempCh:
-			if t < (dewpoint - 2) {
+		case l := <-lightCh:
+			if l < lightGoal {
+				slog.Info("light level below goal, cooldown complete", "light", l, "goal", lightGoal)
+				return
+			}
+		}
+	}
+}
+
+func mirrorLoop(ctx context.Context, hb *hbridge.HBridge, maxCool, lowLight, highLight float64, lightFan *router.Fan[float64], pidFan *router.Fan[cmhpid.ControllerState], pidReset func()) {
+	for {
+		slog.Info("cooling mirror down", "goal", lowLight)
+		hb.Cool(maxCool)
+		cooldown(ctx, lowLight, lightFan)
+		hb.Cool(0.0)
+		pidReset()
+		slog.Info("desired light level reached, resuming pid control")
+		runPID(ctx, hb, highLight, lightFan, pidFan)
+	}
+}
+
+func runPID(ctx context.Context, hb *hbridge.HBridge, highLight float64, lightFan *router.Fan[float64], pidFan *router.Fan[cmhpid.ControllerState]) {
+	lightCh := lightFan.Subscribe("runpid")
+	defer lightFan.Unsubscribe("runpid")
+	pidCh := pidFan.Subscribe("runpid")
+	defer pidFan.Unsubscribe("runpid")
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case control := <-pidCh:
+			slog.Debug("hbridge received control signal", "controlSignal", fmt.Sprintf("%0.3f", control.ControlSignal))
+			hb.Control(control.ControlSignal)
+		case l := <-lightCh:
+			if l > highLight {
+				slog.Info("light level above upper threshold, stopping pid control", "light", l, "goal", highLight)
 				return
 			}
 		}
