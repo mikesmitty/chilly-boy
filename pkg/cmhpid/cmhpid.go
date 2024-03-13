@@ -7,7 +7,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/mikesmitty/chilly-boy/pkg/swma"
 	"go.einride.tech/pid"
 )
 
@@ -65,15 +64,9 @@ func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan flo
 	stateOutput := make(chan ControllerState, 1)
 
 	return stateOutput, c.c.Reset, func() error {
-		lastReading := 0.0
+		lastLight := 0.0
 		lastTemp := 0.0
 		lastTime := time.Now()
-
-		// Average light
-		l := swma.NewSlidingWindow(3)
-
-		// Average temperature
-		t := swma.NewSlidingWindow(3)
 
 		// Tuning
 		periods := make([]float64, 0, 10)
@@ -90,7 +83,7 @@ func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan flo
 			slog.Debug("pid received temperature reading", "temp", temp, "module", "cmhpid")
 
 			if firstLoop {
-				lastReading = float64(light)
+				lastLight = float64(light)
 				lastTemp = temp
 				tuningPeak = temp
 			}
@@ -100,17 +93,9 @@ func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan flo
 			lastTime = now
 			slog.Debug("elapsed time since last cycle", "elapsed", elapsed, "module", "cmhpid")
 
-			// Light sliding window moving average
-			l.Add(light)
-			reading := l.Average()
-
-			diff := (reading - lastReading) / (c.MaxLight / 100.0)
-			slog.Debug("light difference", "current", reading, "last", lastReading, "scale", (c.MaxLight / 100.0), "diff", diff, "module", "cmhpid")
-			lastReading = reading
-
-			// Temperature sliding window moving average
-			t.Add(temp)
-			temp = t.Average()
+			diff := (light - lastLight) / (c.MaxLight / 100.0)
+			slog.Debug("light difference", "current", light, "last", lastLight, "scale", (c.MaxLight / 100.0), "diff", diff, "module", "cmhpid")
+			lastLight = light
 
 			tempDiff := (temp - lastTemp)
 			slog.Debug("temp difference", "tempDiff", tempDiff, "module", "cmhpid")
@@ -137,7 +122,7 @@ func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan flo
 				sign = -1.0
 			}
 
-			signalInput := (math.Pow(1+math.Abs(diff), 10) - 1) * sign
+			signalInput := (math.Pow(1+math.Abs(diff), 15) - 1) * sign
 			slog.Debug("pid signal input", "diff", diff, "signalInput", signalInput, "module", "cmhpid")
 
 			c.c.Update(pid.AntiWindupControllerInput{

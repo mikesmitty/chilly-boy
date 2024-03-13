@@ -265,7 +265,7 @@ func initialCooldown(timeout time.Duration, dewpoint float64, tempFan *router.Fa
 		case <-timer.C:
 			return
 		case t := <-tempCh:
-			if t < dewpoint {
+			if t < (dewpoint - 2) {
 				return
 			}
 		}
