@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0](https://github.com/mikesmitty/chilly-boy/compare/v0.5.2...v0.6.0) (2024-03-13)
+
+
+### Features
+
+* add loop to keep light level within thresholds ([a9a221b](https://github.com/mikesmitty/chilly-boy/commit/a9a221b841fa5285fef4f317f3011e28ab550764))
+* make exponential signal amplification tunable ([8f903a9](https://github.com/mikesmitty/chilly-boy/commit/8f903a9a26764a467913c0f4d75f1172056aa595))
+
 ## [0.5.2](https://github.com/mikesmitty/chilly-boy/compare/v0.5.1...v0.5.2) (2024-03-13)
 
 
