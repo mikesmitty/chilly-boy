@@ -59,6 +59,7 @@ func init() {
 	rootCmd.PersistentFlags().Float64("pid-kd", 0.0, "PID Kd")
 	rootCmd.PersistentFlags().Float64("pid-ff", 0.0, "PID Feed-Forward Gain")
 	rootCmd.PersistentFlags().Float64("pid-awg", 0.0, "PID Anti-Windup Gain")
+	rootCmd.PersistentFlags().Float64("signal-exponent", 15.0, "Exponent for signal input amplification")
 	rootCmd.PersistentFlags().Int("mqtt-sample-interval", 10, "mqtt sample-interval for publishing sensor data")
 
 	viper.BindPFlags(rootCmd.PersistentFlags())

@@ -16,6 +16,7 @@ type Controller struct {
 	c               pid.AntiWindupController
 	feedForwardGain float64
 	interval        time.Duration
+	signalExponent  float64
 	tuning          bool
 	tuningAmp       float64
 	tuningBase      float64
@@ -33,7 +34,7 @@ type ControllerState struct {
 	SignalInput            float64
 }
 
-func NewController(tuning bool, tuneAmp, tuneBase, kp, ki, kd, ff, awg, min, max, maxLight float64, lp, interval time.Duration) *Controller {
+func NewController(tuning bool, tuneAmp, tuneBase, kp, ki, kd, ff, awg, min, max, sigExp, maxLight float64, lp, interval time.Duration) *Controller {
 	if tuning {
 		ki, kd = 0, 0
 	}
@@ -54,6 +55,7 @@ func NewController(tuning bool, tuneAmp, tuneBase, kp, ki, kd, ff, awg, min, max
 		},
 		feedForwardGain: ff,
 		interval:        interval,
+		signalExponent:  sigExp,
 		tuning:          tuning,
 		tuningAmp:       tuneAmp,
 		tuningBase:      tuneBase,
@@ -117,12 +119,12 @@ func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan flo
 				}
 			}
 
+			// Exponentially amplify the signal input to the PID controller in order to track the true dewpoint
 			sign := 1.0
 			if diff < 0 {
 				sign = -1.0
 			}
-
-			signalInput := (math.Pow(1+math.Abs(diff), 15) - 1) * sign
+			signalInput := (math.Pow(1+math.Abs(diff), c.signalExponent) - 1) * sign
 			slog.Debug("pid signal input", "diff", diff, "signalInput", signalInput, "module", "cmhpid")
 
 			c.c.Update(pid.AntiWindupControllerInput{
