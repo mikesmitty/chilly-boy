@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/mikesmitty/chilly-boy/compare/v0.5.1...v0.5.2) (2024-03-13)
+
+
+### Bug Fixes
+
+* make pid output more responsive ([413cdad](https://github.com/mikesmitty/chilly-boy/commit/413cdadb8b53aae1472b1cdb0d703ed9241da774))
+
 ## [0.5.1](https://github.com/mikesmitty/chilly-boy/compare/v0.5.0...v0.5.1) (2024-03-12)
 
 
