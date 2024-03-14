@@ -1,4 +1,4 @@
 # chilly-boy
 Open Source Chilled Mirror Hygrometer Project
 
-![case](img/case.jpg | width=480)
+[![case](img/case-thumb.jpg)](img/case.jpg)
