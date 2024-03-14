@@ -18,6 +18,7 @@ Dewpoint mirrors/chilled mirror hygrometers however, don't have these issues, or
 - Size: Whereas capacitive sensors are often very small, the chips themselves being only a few millimeters across, due to their components CMHs are much harder to build compactly.
 - Power consumption: Thermoelectric Coolers (or TECs) are compact, solid state, and able to both heat and cool the mirror rapidly, but require a relatively large amount of power. For example, the TEC2-25408 uses up to ~7 Amps at 12 Volts. [Wikipedia](https://en.wikipedia.org/wiki/Thermoelectric_cooling)
 - Waste heat: Corollary to the higher power consumption, much of which is expelled as waste heat. The dew point does not fluctuate with temperature so it is unaffected by this waste heat, but some thought is required to manage the heated exhaust airflow to avoid influencing nearby temperature sensors.
+- Maintenance: As implied by the name, its primary component is a dew-covered mirror, which can collect dust over time and does require occasional cleaning.
 
 ## Bill of Materials
 Not including odds and ends, zipties, connectors, wires, screws, etc., the build shown above uses these components:
