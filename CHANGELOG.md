@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.0](https://github.com/mikesmitty/chilly-boy/compare/v0.6.0...v0.7.0) (2024-04-01)
+
+
+### Features
+
+* add linear/setpoint gain ([2e3f380](https://github.com/mikesmitty/chilly-boy/commit/2e3f3801c5f439f2d9cb27bc5ab007dc984d15da))
+
+
+### Bug Fixes
+
+* **deps:** update module go.einride.tech/pid to v0.1.2 ([#12](https://github.com/mikesmitty/chilly-boy/issues/12)) ([7c4d2ea](https://github.com/mikesmitty/chilly-boy/commit/7c4d2ea495143ca5accc6bdd93b157bfcfe78195))
+* various bugfixes ([2e3f380](https://github.com/mikesmitty/chilly-boy/commit/2e3f3801c5f439f2d9cb27bc5ab007dc984d15da))
+
 ## [0.6.0](https://github.com/mikesmitty/chilly-boy/compare/v0.5.2...v0.6.0) (2024-03-13)
 
 
