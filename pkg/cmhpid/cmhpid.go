@@ -7,19 +7,28 @@ import (
 	"sort"
 	"time"
 
+	"github.com/mikesmitty/chilly-boy/pkg/env"
+	"github.com/mikesmitty/chilly-boy/pkg/stats"
 	"go.einride.tech/pid"
 )
 
 type Controller struct {
-	Enabled         bool
-	MaxLight        float64
-	c               pid.AntiWindupController
-	feedForwardGain float64
-	interval        time.Duration
-	signalExponent  float64
-	tuning          bool
-	tuningAmp       float64
-	tuningBase      float64
+	Enabled                bool
+	MaxLight               float64
+	c                      pid.AntiWindupController
+	feedForwardGain        float64
+	interval               time.Duration
+	linearSetpointDeadband float64
+	linearSetpointGain     float64
+	signalExponent         float64
+	signalCap              float64
+	setpointFloor          float64
+	setpointGain           float64
+	setpointStepLimit      float64
+	startupIntegral        float64
+	tuning                 bool
+	tuningAmp              float64
+	tuningBase             float64
 }
 
 type ControllerState struct {
@@ -31,10 +40,13 @@ type ControllerState struct {
 	ControlErrorIntegral   float64
 	ControlErrorDerivative float64
 	ControlSignal          float64
+	Linear                 float64
+	SetPoint               float64
 	SignalInput            float64
+	Volatility             float64
 }
 
-func NewController(tuning bool, tuneAmp, tuneBase, kp, ki, kd, ff, awg, min, max, sigExp, maxLight float64, lp, interval time.Duration) *Controller {
+func NewController(tuning bool, tuneAmp, tuneBase, kp, ki, kd, ff, awg, min, max, sigExp, sigCap, startupIntegral, maxLight float64, lp, interval time.Duration) *Controller {
 	if tuning {
 		ki, kd = 0, 0
 	}
@@ -55,20 +67,29 @@ func NewController(tuning bool, tuneAmp, tuneBase, kp, ki, kd, ff, awg, min, max
 		},
 		feedForwardGain: ff,
 		interval:        interval,
+		signalCap:       sigCap,
 		signalExponent:  sigExp,
+		startupIntegral: startupIntegral,
 		tuning:          tuning,
 		tuningAmp:       tuneAmp,
 		tuningBase:      tuneBase,
 	}
 }
 
-func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan float64) (<-chan ControllerState, func(), func() error) {
+func (c *Controller) GetController(lightChan, tempChan <-chan float64, refChan <-chan env.Env) (<-chan ControllerState, func(), func() error) {
 	stateOutput := make(chan ControllerState, 1)
 
-	return stateOutput, c.c.Reset, func() error {
+	reset := func() {
+		c.c.Reset()
+		c.c.State.ControlErrorIntegral = c.startupIntegral
+	}
+
+	return stateOutput, reset, func() error {
 		lastLight := 0.0
 		lastTemp := 0.0
 		lastTime := time.Now()
+
+		lightStats := stats.NewStats(c.period(3*time.Minute), 0)
 
 		// Tuning
 		periods := make([]float64, 0, 10)
@@ -83,6 +104,8 @@ func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan flo
 			slog.Debug("pid received light reading", "light", light, "module", "cmhpid")
 			temp := <-tempChan
 			slog.Debug("pid received temperature reading", "temp", temp, "module", "cmhpid")
+			ref := <-refChan
+			slog.Debug("pid received reference reading", "refTemp", ref.Temperature, "module", "cmhpid")
 
 			if firstLoop {
 				lastLight = float64(light)
@@ -98,6 +121,29 @@ func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan flo
 			diff := (light - lastLight) / (c.MaxLight / 100.0)
 			slog.Debug("light difference", "current", light, "last", lastLight, "scale", (c.MaxLight / 100.0), "diff", diff, "module", "cmhpid")
 			lastLight = light
+
+			// Calculate the linear regression (algebraic slope) and residual standard deviation of the light output
+			lightStats.Add(light / (c.MaxLight / 100.0))
+			_, m := lightStats.LinearRegression()
+			lightRsd := lightStats.ResidualStandardDeviation(m)
+
+			// Volatility gain pushes the setpoint up to thin out the dew layer. Thicker dew layers are less stable,
+			// tending to have large oscillating swings in temperature, and thus less accurate, so we try to minimize
+			// that volatility by thinning out the dew layer.
+			vol := c.setpointGain * lightRsd / 1e4
+			setPoint := math.Max(0, vol-c.setpointFloor)
+
+			// Linear gain counteracts the tendency for the light output to gradually drift either up or down over time.
+			// It can be tuned out in one environment, but can return when temps and dewpoints change significantly.
+			lin := c.linearSetpointGain * -m
+			if lin < 0 {
+				setPoint += math.Min(0, lin+c.linearSetpointDeadband)
+			} else if lin > 0 {
+				setPoint += math.Max(0, lin-c.linearSetpointDeadband)
+			}
+			setPoint = math.Min(setPoint, c.setpointStepLimit)
+			setPoint = math.Max(setPoint, -c.setpointStepLimit)
+			slog.Debug("setpoint adjustments", "volatility", vol, "linear", lin, "setPoint", setPoint, "setpointGain", c.setpointGain)
 
 			tempDiff := (temp - lastTemp)
 			slog.Debug("temp difference", "tempDiff", tempDiff, "module", "cmhpid")
@@ -124,12 +170,12 @@ func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan flo
 			if diff < 0 {
 				sign = -1.0
 			}
-			signalInput := (math.Pow(1+math.Abs(diff), c.signalExponent) - 1) * sign
+			signalInput := math.Min(c.signalCap, (math.Pow(1+math.Abs(diff), c.signalExponent)-1)) * sign
 			slog.Debug("pid signal input", "diff", diff, "signalInput", signalInput, "module", "cmhpid")
 
 			c.c.Update(pid.AntiWindupControllerInput{
 				// Reference (target) is 0 change in light output
-				ReferenceSignal: 0.0,
+				ReferenceSignal: setPoint,
 				ActualSignal:    signalInput,
 				// Feed Forward is intended to compensate for the delay in response by predicting future signal behavior
 				// Mirror temperature leads light output by a few seconds so using the temperature derivative here
@@ -144,7 +190,7 @@ func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan flo
 				controlSignal += c.tuningBase
 			}
 
-			slog.Debug("pid control signal", "controlSignal", c.c.State.ControlSignal, "tuningBase", c.tuningBase, "module", "cmhpid")
+			slog.Debug("pid control signal", "stateControlSignal", c.c.State.ControlSignal, "controlSignal", controlSignal, "tuningBase", c.tuningBase, "module", "cmhpid")
 			stateOutput <- ControllerState{
 				LightDiff:              diff,
 				TempDiff:               tempDiff,
@@ -153,7 +199,10 @@ func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan flo
 				ControlErrorDerivative: c.c.State.ControlErrorDerivative,
 				ControlSignal:          controlSignal,
 				FeedForward:            feedForward,
+				SetPoint:               setPoint,
 				SignalInput:            signalInput,
+				Linear:                 lin,
+				Volatility:             vol,
 			}
 			slog.Debug("pid control signal published", "module", "cmhpid")
 
@@ -161,6 +210,14 @@ func (c *Controller) GetController(lightChan <-chan float64, tempChan <-chan flo
 		}
 		return nil
 	}
+}
+
+func (p *Controller) SetpointGain(setpointGain, setpointFloor, linearSetpointGain, linearSetpointDeadband, setpointStepLimit float64) {
+	p.setpointGain = setpointGain
+	p.setpointFloor = setpointFloor
+	p.linearSetpointGain = linearSetpointGain
+	p.linearSetpointDeadband = linearSetpointDeadband
+	p.setpointStepLimit = setpointStepLimit
 }
 
 func (p *Controller) SetIntegral(integral float64) {
@@ -192,4 +249,8 @@ func median(data []float64) float64 {
 	}
 
 	return median
+}
+
+func (c *Controller) period(d time.Duration) int {
+	return int(d / c.interval)
 }

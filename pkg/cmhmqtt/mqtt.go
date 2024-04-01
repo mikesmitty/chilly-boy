@@ -18,15 +18,15 @@ import (
 )
 
 type Client struct {
-	client         mqtt.Client
-	topicPrefix    string
-	qos            byte
-	retained       bool
-	tempAvg        *swma.SlidingWindow
-	sampleInterval int
+	client      mqtt.Client
+	topicPrefix string
+	qos         byte
+	retained    bool
+	tempAvg     *swma.SlidingWindow
+	sampleRate  int
 }
 
-func NewClient(broker *url.URL, sampleInterval int, pidInterval time.Duration) *Client {
+func NewClient(broker *url.URL, sampleRate int, pidInterval time.Duration) *Client {
 	c := &Client{}
 
 	var urls []*url.URL
@@ -44,6 +44,9 @@ func NewClient(broker *url.URL, sampleInterval int, pidInterval time.Duration) *
 	c.qos = 1
 	c.topicPrefix = "chilly-boy/" + hostname
 
+	// <discovery_prefix>/<component>/[<node_id>/]<object_id>/config
+	//discoveryTopic := fmt.Sprintf("homeassistant/sensor/%s/config", hostname)
+
 	slog.Info("connecting to mqtt", "url", broker, "clientid", clientID)
 	c.client = mqtt.NewClient(&mqtt.ClientOptions{
 		Servers:        urls,
@@ -51,7 +54,7 @@ func NewClient(broker *url.URL, sampleInterval int, pidInterval time.Duration) *
 		ConnectTimeout: 30 * time.Second,
 	})
 
-	c.sampleInterval = sampleInterval
+	c.sampleRate = sampleRate
 
 	return c
 }
@@ -69,53 +72,52 @@ func (c *Client) GetPublisher(tempChan, dewptChan, lightChan, dutyChan <-chan fl
 	pidTopicDerivative := c.topicPrefix + "/mirror_pid_derivative"
 	pidTopicSignal := c.topicPrefix + "/mirror_pid_signal"
 	pidTopicSignalInput := c.topicPrefix + "/mirror_pid_signal_input"
+	pidTopicSetpoint := c.topicPrefix + "/mirror_pid_setpoint"
+	pidTopicLinear := c.topicPrefix + "/mirror_pid_linear"
+	pidTopicVolatility := c.topicPrefix + "/mirror_pid_volatility"
 	refTopicTemp := c.topicPrefix + "/mirror_reference_temperature"
 	refTopicHumidity := c.topicPrefix + "/mirror_reference_humidity"
 	refTopicDewpoint := c.topicPrefix + "/mirror_reference_dewpoint"
 
-	i, j, k, l, m, n := 0, 0, 0, 0, 0, 0
+	dewpointSample := NewSample(c.sampleRate)
+	tempSample := NewSample(c.sampleRate)
+	lightSample := NewSample(c.sampleRate)
+	dutySample := NewSample(c.sampleRate)
+	pidSample := NewSample(c.sampleRate)
+	refSample := NewSample(c.sampleRate)
+
 	return func() error {
 		go func() {
 			for {
 				select {
 				case dewpt := <-dewptChan:
-					i++
-					if i%c.sampleInterval != 0 {
+					if !dewpointSample.Ready() {
 						continue
 					}
-					i = 0
 					slog.Debug("mqtt publishing", "field", "dewpoint", "value", dewpt, "topic", dewpointTopic)
 					c.Publish(dewpointTopic, strconv.FormatFloat(dewpt, 'f', -1, 64))
 				case temp := <-tempChan:
-					j++
-					if j%c.sampleInterval != 0 {
+					if !tempSample.Ready() {
 						continue
 					}
-					j = 0
 					slog.Debug("mqtt publishing", "field", "rtd", "value", temp, "topic", tempTopic)
 					c.Publish(tempTopic, strconv.FormatFloat(temp, 'f', -1, 64))
 				case light := <-lightChan:
-					k++
-					if k%c.sampleInterval != 0 {
+					if !lightSample.Ready() {
 						continue
 					}
-					k = 0
 					slog.Debug("mqtt publishing", "field", "light", "value", light, "topic", lightTopic)
 					c.Publish(lightTopic, strconv.FormatFloat(light, 'f', 2, 64))
 				case duty := <-dutyChan:
-					l++
-					if l%c.sampleInterval != 0 {
+					if !dutySample.Ready() {
 						continue
 					}
-					l = 0
 					slog.Debug("mqtt publishing", "field", "duty", "value", duty, "topic", dutyCycleTopic)
 					c.Publish(dutyCycleTopic, strconv.FormatFloat(duty, 'f', 2, 64))
 				case pid := <-pidChan:
-					m++
-					if m%c.sampleInterval != 0 {
+					if !pidSample.Ready() {
 						continue
 					}
-					m = 0
 					slog.Debug("mqtt publishing", "field", "pid state", "value", pid)
 					c.Publish(pidTopicDiffLight, strconv.FormatFloat(pid.LightDiff, 'f', 2, 64))
 					c.Publish(pidTopicDiffTemp, strconv.FormatFloat(pid.TempDiff, 'f', 2, 64))
@@ -125,12 +127,13 @@ func (c *Client) GetPublisher(tempChan, dewptChan, lightChan, dutyChan <-chan fl
 					c.Publish(pidTopicDerivative, strconv.FormatFloat(pid.ControlErrorDerivative, 'f', 2, 64))
 					c.Publish(pidTopicSignal, strconv.FormatFloat(pid.ControlSignal, 'f', 2, 64))
 					c.Publish(pidTopicSignalInput, strconv.FormatFloat(pid.SignalInput, 'f', 2, 64))
+					c.Publish(pidTopicSetpoint, strconv.FormatFloat(pid.SetPoint, 'f', 4, 64))
+					c.Publish(pidTopicLinear, strconv.FormatFloat(pid.Linear, 'f', 4, 64))
+					c.Publish(pidTopicVolatility, strconv.FormatFloat(pid.Volatility, 'f', 4, 64))
 				case ref := <-refChan:
-					n++
-					if n%c.sampleInterval != 0 {
+					if !refSample.Ready() {
 						continue
 					}
-					n = 0
 					c.Publish(refTopicTemp, strconv.FormatFloat(ref.Temperature, 'f', 2, 64))
 					c.Publish(refTopicHumidity, strconv.FormatFloat(ref.Humidity, 'f', 2, 64))
 					c.Publish(refTopicDewpoint, strconv.FormatFloat(ref.Dewpoint, 'f', 2, 64))
@@ -194,4 +197,22 @@ func (c *Client) SwitchFn(name string, onFn func(), offFn func(), stateFn func()
 		}
 		return nil
 	}
+}
+
+type Sample struct {
+	count int
+	rate  int
+}
+
+func NewSample(rate int) *Sample {
+	return &Sample{rate: rate}
+}
+
+func (s *Sample) Ready() bool {
+	s.count++
+	if s.count%s.rate == 0 {
+		s.count = 0
+		return true
+	}
+	return false
 }

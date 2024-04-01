@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"time"
 
 	tsl2591 "github.com/JenswBE/golang-tsl2591"
 	max "github.com/mikesmitty/chilly-boy/pkg/cmhmax31865"
@@ -55,7 +56,6 @@ func Root() func(cmd *cobra.Command, args []string) {
 
 		// HBridge
 		hb := hbridge.NewHBridge("GPIO26", "GPIO19", "GPIO20", "GPIO21")
-		hb.Stop()
 
 		// MAX31865
 		sb, err := spireg.Open(spiBus)
@@ -122,7 +122,7 @@ func Root() func(cmd *cobra.Command, args []string) {
 		default:
 			ku := viper.GetFloat64("pid-ku")
 			tu := viper.GetDuration("pid-tu").Seconds()
-			algorithm := viper.GetString("pid-algo")
+			algorithm := viper.GetString("pid-algorithm")
 			// Traditional PID gains
 			kp = viper.GetFloat64("pid-kp")
 			ki = viper.GetFloat64("pid-ki")
@@ -135,15 +135,39 @@ func Root() func(cmd *cobra.Command, args []string) {
 		}
 
 		maxLight := viper.GetFloat64("max-light")
-		lowLight := maxLight * 0.4
-		highLight := maxLight * 0.8
+		lightRatio := viper.GetFloat64("target-light-ratio") / 100
+		maxLightRatio := viper.GetFloat64("target-max-light-ratio") / 100
+		lowLight := maxLight * lightRatio
+		highLight := maxLight * maxLightRatio
 
 		maxCool := viper.GetFloat64("max-cool")
 		maxHeat := viper.GetFloat64("max-heat")
-		sigExp := viper.GetFloat64("signal-exponent")
-		pidLP := viper.GetDuration("pid-lp")
-		pidCtrl := cmhpid.NewController(pidTune, tuneAmp, tuneBase, kp, ki, kd, ff, awg, -1*maxCool, maxHeat, sigExp, maxLight, pidLP, pidInterval)
-		pidCh, pidReset, controller := pidCtrl.GetController(lightFan.Subscribe("pid"), rtdFan.Subscribe("pid"))
+		pidCtrl := cmhpid.NewController(
+			pidTune,
+			tuneAmp,
+			tuneBase,
+			kp,
+			ki,
+			kd,
+			ff,
+			awg,
+			-1*maxCool,
+			maxHeat,
+			viper.GetFloat64("signal-exponent"),
+			viper.GetFloat64("signal-cap"),
+			viper.GetFloat64("pid-startup-integral"),
+			maxLight,
+			viper.GetDuration("pid-lp"),
+			pidInterval,
+		)
+		pidCtrl.SetpointGain(
+			viper.GetFloat64("setpoint-gain"),
+			viper.GetFloat64("setpoint-floor"),
+			viper.GetFloat64("linear-setpoint-gain"),
+			viper.GetFloat64("linear-setpoint-deadband"),
+			viper.GetFloat64("setpoint-step-limit"),
+		)
+		pidCh, pidReset, controller := pidCtrl.GetController(lightFan.Subscribe("pid"), rtdFan.Subscribe("pid"), refFan.Subscribe("pid"))
 		slog.Debug("starting pid controller")
 		g.Go(controller)
 		pidFan := router.NewFan[cmhpid.ControllerState]("pid", pidCh)
@@ -220,6 +244,7 @@ func heatCycle(ctx context.Context, heatGoal, lightGoal float64, lightFan, tempF
 		}
 	}
 
+	peakLight := 0.0
 	var cooling bool
 	var heating bool
 	for {
@@ -233,21 +258,25 @@ func heatCycle(ctx context.Context, heatGoal, lightGoal float64, lightFan, tempF
 				slog.Info("mirror temperature is below dewpoint, beginning heating", "temp", t, "dewpoint", dewpoint)
 				heating = true
 				if err := heatFn(); err != nil {
+					slog.Error("heat cycle failed", "error", err)
 					stopFn()
 					return err
 				}
-				return nil
 			} else if heating && t > heatGoal {
 				slog.Info("mirror reached goal temperature, cooling back down", "temp", t, "goal", heatGoal)
 				cooling = true
 				heating = false
 				if err := coolFn(); err != nil {
+					slog.Error("heat cycle failed", "error", err)
 					return err
 				}
 			}
 		case l := <-lightCh:
+			if l > peakLight {
+				peakLight = l
+			}
 			if cooling && l < lightGoal {
-				slog.Info("light level below goal, heatcycle complete", "light", l, "goal", lightGoal)
+				slog.Info("light level below goal, heatcycle complete", "light", l, "goal", lightGoal, "peak", peakLight)
 				stopFn()
 				return nil
 			}
@@ -255,9 +284,14 @@ func heatCycle(ctx context.Context, heatGoal, lightGoal float64, lightFan, tempF
 	}
 }
 
-func cooldown(ctx context.Context, lightGoal float64, lightFan *router.Fan[float64]) {
+func cooldown(ctx context.Context, lightGoal float64, lightFan *router.Fan[float64], cool func()) {
 	lightCh := lightFan.Subscribe("cooldown")
 	defer lightFan.Unsubscribe("cooldown")
+	l := <-lightCh
+	if l > lightGoal {
+		cool()
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -274,9 +308,9 @@ func cooldown(ctx context.Context, lightGoal float64, lightFan *router.Fan[float
 func mirrorLoop(ctx context.Context, hb *hbridge.HBridge, maxCool, lowLight, highLight float64, lightFan *router.Fan[float64], pidFan *router.Fan[cmhpid.ControllerState], pidReset func()) {
 	for {
 		slog.Info("cooling mirror down", "goal", lowLight)
-		hb.Cool(maxCool)
-		cooldown(ctx, lowLight, lightFan)
+		cooldown(ctx, lowLight, lightFan, func() { hb.Cool(maxCool) })
 		hb.Cool(0.0)
+		time.Sleep(5 * time.Second)
 		pidReset()
 		slog.Info("desired light level reached, resuming pid control")
 		runPID(ctx, hb, highLight, lightFan, pidFan)
