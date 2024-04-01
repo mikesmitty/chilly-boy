@@ -70,6 +70,8 @@ github.com/subosito/gotenv v1.6.0 h1:9NlTDc1FTs4qu0DDq7AEtTPNw6SVm7uBMsUCUjABIf8
 github.com/subosito/gotenv v1.6.0/go.mod h1:Dk4QP5c2W3ibzajGcXpNraDfq2IrhjMIvMSWPKKo0FU=
 go.einride.tech/pid v0.1.1 h1:8r83em/qw2q7oTVyamr5ZzRfn+nrkCIh7vDZtF21H8E=
 go.einride.tech/pid v0.1.1/go.mod h1:BUjG38m9IR0WUdj1o+xGi9akLoky/E6LmgPsP2FoqpU=
+go.einride.tech/pid v0.1.2 h1:6qn2Whj5usUSxJlXkYCQVmCyE52uxIppRoWlSXagm2o=
+go.einride.tech/pid v0.1.2/go.mod h1:33JSUbKrH/4v8DZf/0K8IC8Enjd92wB2birp+bCYQso=
 go.uber.org/multierr v1.11.0 h1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=
 go.uber.org/multierr v1.11.0/go.mod h1:20+QtiLqy0Nd6FdQB9TLXag12DsQkrbs3htMFfDN80Y=
 golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 h1:aAcj0Da7eBAtrTp03QXWvm88pSyOt+UgdZw2BFZ+lEw=

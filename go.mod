@@ -10,7 +10,7 @@ require (
 	github.com/mikesmitty/sht4x v0.1.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
-	go.einride.tech/pid v0.1.1
+	go.einride.tech/pid v0.1.2
 	golang.org/x/sync v0.6.0
 	gonum.org/v1/gonum v0.15.0
 	periph.io/x/conn/v3 v3.7.0
