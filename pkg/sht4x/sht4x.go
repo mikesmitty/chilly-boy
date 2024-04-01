@@ -1,4 +1,4 @@
-package cmhmax31865
+package sht4x
 
 import (
 	"context"
@@ -6,12 +6,13 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/mikesmitty/max31865"
+	"github.com/mikesmitty/chilly-boy/pkg/env"
+	sht "github.com/mikesmitty/sht4x"
 	"periph.io/x/conn/v3/physic"
 )
 
-func TemperatureChannel(ctx context.Context, dev *max31865.Dev, interval time.Duration) (<-chan float64, func() error) {
-	c := make(chan float64, 1)
+func TemperatureChannel(ctx context.Context, dev *sht.Dev, interval time.Duration) (<-chan env.Env, func() error) {
+	c := make(chan env.Env, 1)
 	ctx, cancelFunc := context.WithCancel(ctx)
 	return c, func() error {
 		defer cancelFunc()
@@ -25,10 +26,11 @@ func TemperatureChannel(ctx context.Context, dev *max31865.Dev, interval time.Du
 				var e physic.Env
 				err := dev.Sense(&e)
 				if err != nil {
-					return fmt.Errorf("max31865: %w", err)
+					return fmt.Errorf("sht4x: %w", err)
 				}
-				slog.Debug("publishing reading", "value", e.Temperature.Celsius(), "module", "max31865")
-				c <- e.Temperature.Celsius()
+				slog.Debug("publishing reading", "temp", e.Temperature.Celsius(), "humidity", e.Humidity, "module", "sht4x")
+				en := env.New(e.Temperature.Celsius(), float64(e.Humidity)/float64(physic.PercentRH))
+				c <- en
 			}
 		}
 	}

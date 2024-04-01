@@ -11,16 +11,16 @@ import (
 	"time"
 
 	tsl2591 "github.com/JenswBE/golang-tsl2591"
-	max "github.com/mikesmitty/chilly-boy/pkg/cmhmax31865"
-	mqtt "github.com/mikesmitty/chilly-boy/pkg/cmhmqtt"
 	"github.com/mikesmitty/chilly-boy/pkg/cmhpid"
-	sht "github.com/mikesmitty/chilly-boy/pkg/cmhsht4x"
-	tsl "github.com/mikesmitty/chilly-boy/pkg/cmhtsl2591"
 	"github.com/mikesmitty/chilly-boy/pkg/dewpoint"
 	"github.com/mikesmitty/chilly-boy/pkg/dutycycle"
 	"github.com/mikesmitty/chilly-boy/pkg/env"
 	"github.com/mikesmitty/chilly-boy/pkg/hbridge"
+	max "github.com/mikesmitty/chilly-boy/pkg/max31865"
+	"github.com/mikesmitty/chilly-boy/pkg/mqtt"
 	"github.com/mikesmitty/chilly-boy/pkg/router"
+	sht "github.com/mikesmitty/chilly-boy/pkg/sht4x"
+	tsl "github.com/mikesmitty/chilly-boy/pkg/tsl2591"
 	"github.com/mikesmitty/chilly-boy/pkg/watchdog"
 	"github.com/mikesmitty/max31865"
 	"github.com/mikesmitty/sht4x"
@@ -188,7 +188,9 @@ func Root() func(cmd *cobra.Command, args []string) {
 		mqttSampleInterval := viper.GetInt("mqtt-sample-interval")
 		errChk(err)
 		mc := mqtt.NewClient(mqttUrl, mqttSampleInterval, pidInterval)
+		errChk(mc.Connect())
 		g.Go(mc.GetPublisher(rtdFan.Subscribe("mqtt"), dewptFan.Subscribe("mqtt"), lightFan.Subscribe("mqtt"), dutyFan.Subscribe("mqtt"), pidFan.Subscribe("mqtt"), refFan.Subscribe("mqtt")))
+		errChk(mc.HomeAssistant())
 		// Publish/handle the mirror-enable switch
 		g.Go(mc.SwitchFn("mirror-enable", hb.Enable, hb.Disable, hb.GetEnable))
 

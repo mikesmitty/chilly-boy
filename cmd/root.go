@@ -62,7 +62,7 @@ func init() {
 	rootCmd.PersistentFlags().Float64("pid-startup-integral", -10.0, "PID startup integral value")
 	rootCmd.PersistentFlags().Float64("linear-setpoint-gain", 1.0, "Linear setpoint auto-adjust gain counteracts subtle drift over time")
 	rootCmd.PersistentFlags().Float64("linear-setpoint-deadband", 0.0, "Linear setpoint auto-adjust deadband, disables linear setpoint adjustment if normalized light output drift is above/below this value")
-	rootCmd.PersistentFlags().Float64("setpoint-gain", 0.70, "Setpoint auto-adjust gain helps maintain a thin, stable layer of dew on the mirror")
+	rootCmd.PersistentFlags().Float64("setpoint-gain", 1.5, "Setpoint auto-adjust gain helps maintain a thin, stable layer of dew on the mirror")
 	rootCmd.PersistentFlags().Float64("setpoint-floor", 0.0, "Setpoint auto-adjust floor, don't adjust if volatility is below this value")
 	rootCmd.PersistentFlags().Float64("setpoint-step-limit", 0.01, "Setpoint auto-adjust step limit, maximum setpoint value")
 	rootCmd.PersistentFlags().Float64("signal-exponent", 14.0, "Exponent for signal input amplification")

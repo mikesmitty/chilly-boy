@@ -1,4 +1,4 @@
-package cmhtsl2591
+package tsl2591
 
 import (
 	"context"
@@ -7,10 +7,10 @@ import (
 	"log/slog"
 	"time"
 
-	tsl2591 "github.com/JenswBE/golang-tsl2591"
+	tsl "github.com/JenswBE/golang-tsl2591"
 )
 
-func LightChannel(ctx context.Context, dev *tsl2591.TSL2591, interval time.Duration) (<-chan float64, func() error) {
+func LightChannel(ctx context.Context, dev *tsl.TSL2591, interval time.Duration) (<-chan float64, func() error) {
 	c := make(chan float64, 1)
 	ctx, cancelFunc := context.WithCancel(ctx)
 	return c, func() error {
@@ -33,7 +33,7 @@ func LightChannel(ctx context.Context, dev *tsl2591.TSL2591, interval time.Durat
 	}
 }
 
-func TickerPrint(ctx context.Context, tsl *tsl2591.TSL2591, lightInterval time.Duration) func() error {
+func TickerPrint(ctx context.Context, tsl *tsl.TSL2591, lightInterval time.Duration) func() error {
 	ctx, cancelFunc := context.WithCancel(ctx)
 	return func() error {
 		defer cancelFunc()
