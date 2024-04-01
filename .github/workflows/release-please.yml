@@ -21,9 +21,8 @@ jobs:
 
 
   build:
-    if: ${{ fromJson(needs.release-please.outputs.release-created) }}
+    if: ${{ needs.release-please.outputs.release-created }}
     needs: release-please
-    #environment: build
     runs-on: ubuntu-latest
     strategy:
       matrix:
