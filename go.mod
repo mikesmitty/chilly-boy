@@ -10,6 +10,7 @@ require (
 	github.com/mikesmitty/sht4x v0.1.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
+	github.com/stianeikeland/go-rpio/v4 v4.6.0
 	go.einride.tech/pid v0.1.2
 	golang.org/x/sync v0.6.0
 	golang.org/x/text v0.14.0

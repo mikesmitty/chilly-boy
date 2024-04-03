@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	tsl2591 "github.com/JenswBE/golang-tsl2591"
@@ -47,15 +48,25 @@ func Root() func(cmd *cobra.Command, args []string) {
 		i2cBus := viper.GetString("i2cbus")
 		pidInterval := viper.GetDuration("pid-interval")
 
-		_, err := host.Init()
+		hostState, err := host.Init()
 		errChk(err)
+		for i := range hostState.Loaded {
+			slog.Debug("loaded", "module", hostState.Loaded[i])
+		}
+		for i := range hostState.Failed {
+			slog.Error("failed", "module", hostState.Failed[i])
+		}
+		for i := range hostState.Skipped {
+			slog.Debug("skipped", "module", hostState.Skipped[i])
+		}
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		g, ctx := errgroup.WithContext(ctx)
 		g.SetLimit(-1)
 
 		// HBridge
-		hb := hbridge.NewHBridge("GPIO26", "GPIO19", "GPIO20", "GPIO21")
+		hb, err := hbridge.NewHBridge(12, 13, 5, 6)
+		errChk(err)
 
 		// MAX31865
 		sb, err := spireg.Open(spiBus)
@@ -161,8 +172,6 @@ func Root() func(cmd *cobra.Command, args []string) {
 			pidInterval,
 		)
 		pidCtrl.SetpointGain(
-			viper.GetFloat64("setpoint-gain"),
-			viper.GetFloat64("setpoint-floor"),
 			viper.GetFloat64("linear-setpoint-gain"),
 			viper.GetFloat64("linear-setpoint-deadband"),
 			viper.GetFloat64("setpoint-step-limit"),
@@ -200,7 +209,7 @@ func Root() func(cmd *cobra.Command, args []string) {
 
 		// Signal handling
 		chanSignal := make(chan os.Signal, 1)
-		signal.Notify(chanSignal, os.Interrupt)
+		signal.Notify(chanSignal, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
 
 		g.Go(func() error {
 			defer cancelFunc()

@@ -2,74 +2,44 @@ package hbridge
 
 import (
 	"fmt"
-	"log"
 	"log/slog"
-	"strconv"
+	"math"
 	"sync"
 
-	"periph.io/x/conn/v3/gpio"
-	"periph.io/x/conn/v3/gpio/gpioreg"
-	"periph.io/x/conn/v3/physic"
+	"github.com/stianeikeland/go-rpio/v4"
 )
 
+const kHz = 1000
+
 type HBridge struct {
-	freq    physic.Frequency
-	pinA    gpio.PinOut
-	pinB    gpio.PinOut
-	enPinA  gpio.PinOut
-	enPinB  gpio.PinOut
+	freq    int
+	pinA    rpio.Pin
+	pinB    rpio.Pin
+	enPinA  rpio.Pin
+	enPinB  rpio.Pin
 	enabled bool
 	mu      sync.Mutex
 }
 
-func NewHBridge(pinA, pinB, enablePinA, enablePinB string) *HBridge {
-	pA := gpioreg.ByName(pinA)
-	if pA == nil {
-		log.Fatal("Failed to find pinA")
-	}
-	err := pA.Out(gpio.Low)
+func NewHBridge(pinA, pinB, enablePinA, enablePinB int) (*HBridge, error) {
+	err := rpio.Open()
 	if err != nil {
-		log.Fatal("Failed to set pinA output low")
+		return nil, fmt.Errorf("failed to open rpio: %w", err)
 	}
 
-	pB := gpioreg.ByName(pinB)
-	if pB == nil {
-		log.Fatal("Failed to find pinB")
-	}
-	err = pB.Out(gpio.Low)
-	if err != nil {
-		log.Fatal("Failed to set pinB output low")
-	}
-
-	eA := gpioreg.ByName(enablePinA)
-	if eA == nil {
-		log.Fatal("Failed to find enablePinA")
-	}
-	err = eA.Out(gpio.High)
-	if err != nil {
-		log.Fatal("Failed to set enablePinA output low")
+	hb := &HBridge{
+		freq:   1 * kHz,
+		pinA:   pinInit(pinA),
+		pinB:   pinInit(pinB),
+		enPinA: pinInit(enablePinA),
+		enPinB: pinInit(enablePinB),
 	}
 
-	eB := gpioreg.ByName(enablePinB)
-	if eB == nil {
-		log.Fatal("Failed to find enablePinB")
-	}
-	err = eB.Out(gpio.Low)
-	if err != nil {
-		log.Fatal("Failed to set enablePinB output low")
-	}
-
-	return &HBridge{
-		freq:   1 * physic.KiloHertz,
-		pinA:   pA,
-		pinB:   pB,
-		enPinA: eA,
-		enPinB: eB,
-	}
+	return hb, nil
 }
 
 func (h *HBridge) Control(percent float64) error {
-	if !h.GetEnable() {
+	if !h.enabled {
 		slog.Debug("control sent when hbridge not enabled", "percent", percent)
 	}
 	if percent < 0 {
@@ -86,13 +56,13 @@ func (h *HBridge) Control(percent float64) error {
 func (h *HBridge) Cool(percent float64) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	return h.control(percent, 0)
+	return h.control(uint32(math.Round(percent)), 0)
 }
 
 func (h *HBridge) Heat(percent float64) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	return h.control(0, percent)
+	return h.control(0, uint32(math.Round(percent)))
 }
 
 func (h *HBridge) GetEnable() bool {
@@ -105,14 +75,8 @@ func (h *HBridge) Enable() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.enabled = true
-	err := h.enPinA.Out(gpio.High)
-	if err != nil {
-		log.Fatal("Failed to set enablePinA output to high")
-	}
-	err = h.enPinB.Out(gpio.High)
-	if err != nil {
-		log.Fatal("Failed to set enablePinA output to high")
-	}
+	h.enPinA.High()
+	h.enPinB.High()
 }
 
 func (h *HBridge) Disable() {
@@ -121,30 +85,25 @@ func (h *HBridge) Disable() {
 	h.disable()
 }
 
-func (h *HBridge) Stop() error {
+func (h *HBridge) Stop() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	return h.control(0, 0)
+	h.set(h.pinA, 0)
+	h.set(h.pinB, 0)
 }
 
 func (h *HBridge) HardStop() error {
-	errA := h.disable()
-	errB := h.control(0, 0)
-	if errA != nil {
-		return errA
-	}
-	if errB != nil {
-		return errB
-	}
-	return nil
+	h.set(h.pinA, 0)
+	h.set(h.pinB, 0)
+	return h.disable()
 }
 
-func (h *HBridge) control(cool, heat float64) error {
+func (h *HBridge) control(cool, heat uint32) error {
+	if cool > 0 && heat > 0 {
+		return fmt.Errorf("invalid hbridge control: cool=%d, heat=%d", cool, heat)
+	}
 	errA := h.set(h.pinA, heat)
 	errB := h.set(h.pinB, cool)
-	if cool > 0 && heat > 0 || cool == 0 && heat == 0 {
-		slog.Info("hbridge control", "cool", strconv.FormatFloat(cool, 'f', 2, 64), "heat", strconv.FormatFloat(heat, 'f', 2, 64))
-	}
 	if errA != nil || errB != nil {
 		return fmt.Errorf("failed to set hbridge pwm: %v, %v", errA, errB)
 	}
@@ -152,19 +111,28 @@ func (h *HBridge) control(cool, heat float64) error {
 }
 
 func (h *HBridge) disable() error {
-	errA := h.enPinA.Out(gpio.Low)
-	errB := h.enPinB.Out(gpio.Low)
-	if errA != nil || errB != nil {
-		return fmt.Errorf("failed to disable hbridge: %v, %v", errA, errB)
+	h.enPinA.Low()
+	h.enPinB.Low()
+	if h.enPinA.Read() != rpio.Low || h.enPinB.Read() != rpio.Low {
+		return fmt.Errorf("failed to disable hbridge")
 	}
 	h.enabled = false
 	return nil
 }
 
-func (h *HBridge) set(pin gpio.PinOut, percent float64) error {
-	dutyCycle := gpio.DutyMax * gpio.Duty(percent/100.0)
-	if err := pin.PWM(dutyCycle, h.freq); err != nil {
-		return err
+func (h *HBridge) set(pin rpio.Pin, percent uint32) error {
+	if percent > 100 {
+		return fmt.Errorf("pwm percent cannot be more than 100: %d", percent)
 	}
+	pin.Pwm()
+	pin.DutyCycle(percent, 101-percent)
+	pin.Freq(h.freq * 10)
 	return nil
+}
+
+func pinInit(number int) rpio.Pin {
+	p := rpio.Pin(number)
+	p.Output()
+	p.Low()
+	return p
 }

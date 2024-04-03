@@ -59,3 +59,6 @@ Not including odds and ends, zipties, connectors, wires, screws, etc., the build
 - (Optional) Ethernet cable from CNLINKO RJ45 plug to Raspberry Pi
 - (Optional) Noctua NF-F12 iPPC-2000 IP67 fans: $28 https://www.amazon.com/dp/B00KFCRIQM
 - (Optional) WAGO 221 Lever Nuts allow for easy removal of the sensor assembly from the housing
+
+# Raspberry Pi Hardware Config
+If not using a Pi4 or later, comment out `dtparam=audio=on` (the sound card uses the PWM channels, but Pi4+ have dedicated PWM for audio)

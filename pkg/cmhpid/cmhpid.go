@@ -22,8 +22,6 @@ type Controller struct {
 	linearSetpointGain     float64
 	signalExponent         float64
 	signalCap              float64
-	setpointFloor          float64
-	setpointGain           float64
 	setpointStepLimit      float64
 	startupIntegral        float64
 	tuning                 bool
@@ -43,7 +41,6 @@ type ControllerState struct {
 	Linear                 float64
 	SetPoint               float64
 	SignalInput            float64
-	Volatility             float64
 }
 
 func NewController(tuning bool, tuneAmp, tuneBase, kp, ki, kd, ff, awg, min, max, sigExp, sigCap, startupIntegral, maxLight float64, lp, interval time.Duration) *Controller {
@@ -122,20 +119,12 @@ func (c *Controller) GetController(lightChan, tempChan <-chan float64, refChan <
 			slog.Debug("light difference", "current", light, "last", lastLight, "scale", (c.MaxLight / 100.0), "diff", diff, "module", "cmhpid")
 			lastLight = light
 
-			// Calculate the linear regression (algebraic slope) and residual standard deviation of the light output
-			lightStats.Add(light / (c.MaxLight / 100.0))
-			_, m := lightStats.LinearRegression()
-			lightRsd := lightStats.ResidualStandardDeviation(m)
-
-			// Volatility gain pushes the setpoint up to thin out the dew layer. Thicker dew layers are less stable,
-			// tending to have large oscillating swings in temperature, and thus less accurate, so we try to minimize
-			// that volatility by thinning out the dew layer.
-			vol := c.setpointGain * lightRsd / 1e4
-			setPoint := math.Max(0, vol-c.setpointFloor)
-
 			// Linear gain counteracts the tendency for the light output to gradually drift either up or down over time.
 			// It can be tuned out in one environment, but can return when temps and dewpoints change significantly.
+			lightStats.Add(light / (c.MaxLight / 100.0))
+			_, m := lightStats.LinearRegression()
 			lin := c.linearSetpointGain * -m
+			setPoint := 0.0
 			if lin < 0 {
 				setPoint += math.Min(0, lin+c.linearSetpointDeadband)
 			} else if lin > 0 {
@@ -143,7 +132,7 @@ func (c *Controller) GetController(lightChan, tempChan <-chan float64, refChan <
 			}
 			setPoint = math.Min(setPoint, c.setpointStepLimit)
 			setPoint = math.Max(setPoint, -c.setpointStepLimit)
-			slog.Debug("setpoint adjustments", "volatility", vol, "linear", lin, "setPoint", setPoint, "setpointGain", c.setpointGain)
+			slog.Debug("setpoint adjustments", "linear", lin, "setPoint", setPoint, "setpointGain", c.linearSetpointGain)
 
 			tempDiff := (temp - lastTemp)
 			slog.Debug("temp difference", "tempDiff", tempDiff, "module", "cmhpid")
@@ -202,7 +191,6 @@ func (c *Controller) GetController(lightChan, tempChan <-chan float64, refChan <
 				SetPoint:               setPoint,
 				SignalInput:            signalInput,
 				Linear:                 lin,
-				Volatility:             vol,
 			}
 			slog.Debug("pid control signal published", "module", "cmhpid")
 
@@ -212,9 +200,7 @@ func (c *Controller) GetController(lightChan, tempChan <-chan float64, refChan <
 	}
 }
 
-func (p *Controller) SetpointGain(setpointGain, setpointFloor, linearSetpointGain, linearSetpointDeadband, setpointStepLimit float64) {
-	p.setpointGain = setpointGain
-	p.setpointFloor = setpointFloor
+func (p *Controller) SetpointGain(linearSetpointGain, linearSetpointDeadband, setpointStepLimit float64) {
 	p.linearSetpointGain = linearSetpointGain
 	p.linearSetpointDeadband = linearSetpointDeadband
 	p.setpointStepLimit = setpointStepLimit
