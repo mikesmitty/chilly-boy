@@ -63,7 +63,7 @@ func init() {
 	rootCmd.PersistentFlags().Float64("linear-setpoint-gain", 0.0, "Linear setpoint auto-adjust gain counteracts subtle drift over time")
 	rootCmd.PersistentFlags().Float64("linear-setpoint-deadband", 0.0, "Linear setpoint auto-adjust deadband, disables linear setpoint adjustment if normalized light output drift is above/below this value")
 	rootCmd.PersistentFlags().Float64("setpoint-step-limit", 0.010, "Setpoint auto-adjust step limit, maximum setpoint value")
-	rootCmd.PersistentFlags().Float64("signal-exponent", 14.0, "Exponent for signal input amplification")
+	rootCmd.PersistentFlags().Float64("signal-exponent", 16.0, "Exponent for signal input amplification")
 	rootCmd.PersistentFlags().Float64("signal-cap", 100000.0, "Cap exponential signal amplification output")
 	rootCmd.PersistentFlags().Float64("target-light-ratio", 80.0, "Target light level ratio during cooldown process")
 	rootCmd.PersistentFlags().Float64("target-max-light-ratio", 80.0, "Light level threshold ratio where a cooldown process is triggered")

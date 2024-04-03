@@ -109,13 +109,13 @@ func (c *Client) GetPublisher(tempChan, dewptChan, lightChan, dutyChan <-chan fl
 					continue
 				}
 				slog.Debug("mqtt publishing", "field", "dewpoint", "value", dewpt)
-				c.HassPublishSensor(dewpointSensor, strconv.FormatFloat(dewpt, 'f', -1, 64))
+				c.HassPublishSensor(dewpointSensor, strconv.FormatFloat(dewpt, 'f', 5, 64))
 			case temp := <-tempChan:
 				if !tempSample.Ready() {
 					continue
 				}
 				slog.Debug("mqtt publishing", "field", "rtd", "value", temp)
-				c.HassPublishSensor(tempSensor, strconv.FormatFloat(temp, 'f', -1, 64))
+				c.HassPublishSensor(tempSensor, strconv.FormatFloat(temp, 'f', 5, 64))
 			case light := <-lightChan:
 				if !lightSample.Ready() {
 					continue
