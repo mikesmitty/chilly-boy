@@ -72,16 +72,16 @@ func Root() func(cmd *cobra.Command, args []string) {
 		sb, err := spireg.Open(spiBus)
 		errChk(err)
 
-		rtdDev, err := max31865.New(sb, nil)
+		tempDev, err := max31865.New(sb, nil)
 		errChk(err)
 
-		rtdCh, rtdFn := max.TemperatureChannel(ctx, rtdDev, pidInterval)
-		slog.Debug("starting rtd")
-		g.Go(rtdFn)
-		rtdFan := router.NewFan[float64]("rtd", rtdCh)
-		g.Go(rtdFan.Run)
+		tempCh, tempFn := max.TemperatureChannel(ctx, tempDev, pidInterval)
+		slog.Debug("starting temp")
+		g.Go(tempFn)
+		tempFan := router.NewFan[float64]("temp", tempCh)
+		g.Go(tempFan.Run)
 
-		dewptCh, dewptFn := dewpoint.NewDewpoint(rtdFan.Subscribe("dewpoint"))
+		dewptCh, dewptFn := dewpoint.NewDewpoint(tempFan.Subscribe("dewpoint"))
 		slog.Debug("starting dewpoint")
 		g.Go(dewptFn)
 		dewptFan := router.NewFan[float64]("dewpoint", dewptCh)
@@ -151,8 +151,16 @@ func Root() func(cmd *cobra.Command, args []string) {
 		lowLight := maxLight * lightRatio
 		highLight := maxLight * maxLightRatio
 
+		initCool := viper.GetFloat64("initial-cool")
+		initHeat := viper.GetFloat64("initial-heat")
 		maxCool := viper.GetFloat64("max-cool")
 		maxHeat := viper.GetFloat64("max-heat")
+		if initCool == 0.0 {
+			initCool = maxCool
+		}
+		if initHeat == 0.0 {
+			initHeat = maxHeat
+		}
 		pidCtrl := cmhpid.NewController(
 			pidTune,
 			tuneAmp,
@@ -170,13 +178,17 @@ func Root() func(cmd *cobra.Command, args []string) {
 			maxLight,
 			viper.GetDuration("pid-lp"),
 			pidInterval,
+			viper.GetInt("pid-input-average"),
+			viper.GetInt("pid-output-average"),
 		)
 		pidCtrl.SetpointGain(
+			viper.GetFloat64("setpoint-gain"),
+			viper.GetFloat64("setpoint-floor"),
 			viper.GetFloat64("linear-setpoint-gain"),
 			viper.GetFloat64("linear-setpoint-deadband"),
 			viper.GetFloat64("setpoint-step-limit"),
 		)
-		pidCh, pidReset, controller := pidCtrl.GetController(lightFan.Subscribe("pid"), rtdFan.Subscribe("pid"), refFan.Subscribe("pid"))
+		pidCh, pidReset, controller := pidCtrl.GetController(lightFan.Subscribe("pid"), tempFan.Subscribe("pid"), refFan.Subscribe("pid"))
 		slog.Debug("starting pid controller")
 		g.Go(controller)
 		pidFan := router.NewFan[cmhpid.ControllerState]("pid", pidCh)
@@ -184,7 +196,7 @@ func Root() func(cmd *cobra.Command, args []string) {
 
 		hb.Enable()
 		slog.Debug("starting mirror control loop")
-		go mirrorLoop(ctx, hb, maxCool, lowLight, highLight, lightFan, pidFan, pidReset)
+		go mirrorLoop(ctx, hb, initCool, initHeat, lowLight, highLight, lightFan, tempFan, refFan, pidFan, pidReset, pidCtrl)
 
 		// Duty Cycle
 		dutyCh, dutyCycle := dutycycle.NewDutyCycle(pidFan.Subscribe("dutycycle"))
@@ -198,7 +210,7 @@ func Root() func(cmd *cobra.Command, args []string) {
 		errChk(err)
 		mc := mqtt.NewClient(mqttUrl, mqttSampleInterval, pidInterval)
 		errChk(mc.Connect())
-		g.Go(mc.GetPublisher(rtdFan.Subscribe("mqtt"), dewptFan.Subscribe("mqtt"), lightFan.Subscribe("mqtt"), dutyFan.Subscribe("mqtt"), pidFan.Subscribe("mqtt"), refFan.Subscribe("mqtt")))
+		g.Go(mc.GetPublisher(tempFan.Subscribe("mqtt"), dewptFan.Subscribe("mqtt"), lightFan.Subscribe("mqtt"), dutyFan.Subscribe("mqtt"), pidFan.Subscribe("mqtt"), refFan.Subscribe("mqtt")))
 		errChk(mc.HomeAssistant())
 		// Publish/handle the mirror-enable switch
 		g.Go(mc.SwitchFn("mirror-enable", hb.Enable, hb.Disable, hb.GetEnable))
@@ -237,69 +249,55 @@ func errChk(err error) {
 	}
 }
 
-func heatCycle(ctx context.Context, heatGoal, lightGoal float64, lightFan, tempFan *router.Fan[float64], refFan *router.Fan[env.Env], coolFn, stopFn, heatFn func() error) error {
+func heatUp(ctx context.Context, heatGoal float64, tempFan *router.Fan[float64], stopFn, heatFn func() error) error {
 	tempCh := tempFan.Subscribe("maxlight")
 	defer tempFan.Unsubscribe("maxlight")
-	lightCh := lightFan.Subscribe("maxlight")
-	defer lightFan.Unsubscribe("maxlight")
-	refCh := refFan.Subscribe("maxlight")
-	defer refFan.Unsubscribe("maxlight")
 
-	r := <-refCh
-	dewpoint := r.Dewpoint
-	t := <-tempCh
-	if t > dewpoint {
-		slog.Info("begining heat cycle, cooling to dewpoint", "mirror-temp", t, "dewpoint", dewpoint)
-		if err := coolFn(); err != nil {
-			return err
-		}
+	temp := <-tempCh
+	if temp > heatGoal {
+		slog.Info("mirror above goal temperature, cooling back down", "temp", temp, "goal", heatGoal)
+		return nil
 	}
 
-	peakLight := 0.0
-	var cooling bool
-	var heating bool
+	slog.Info("mirror below goal temperature, heating up", "temp", temp, "goal", heatGoal)
+	err := heatFn()
+	if err != nil {
+		return err
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case r := <-refCh:
-			dewpoint = r.Dewpoint
-		case t := <-tempCh:
-			if !cooling && !heating && t < dewpoint {
-				slog.Info("mirror temperature is below dewpoint, beginning heating", "temp", t, "dewpoint", dewpoint)
-				heating = true
-				if err := heatFn(); err != nil {
-					slog.Error("heat cycle failed", "error", err)
-					stopFn()
-					return err
-				}
-			} else if heating && t > heatGoal {
-				slog.Info("mirror reached goal temperature, cooling back down", "temp", t, "goal", heatGoal)
-				cooling = true
-				heating = false
-				if err := coolFn(); err != nil {
-					slog.Error("heat cycle failed", "error", err)
-					return err
-				}
-			}
-		case l := <-lightCh:
-			if l > peakLight {
-				peakLight = l
-			}
-			if cooling && l < lightGoal {
-				slog.Info("light level below goal, heatcycle complete", "light", l, "goal", lightGoal, "peak", peakLight)
-				stopFn()
-				return nil
+		case temp = <-tempCh:
+			if temp > heatGoal {
+				slog.Info("mirror reached goal temperature, cooling back down", "temp", temp, "goal", heatGoal)
+				return stopFn()
 			}
 		}
 	}
 }
 
-func cooldown(ctx context.Context, lightGoal float64, lightFan *router.Fan[float64], cool func()) {
-	lightCh := lightFan.Subscribe("cooldown")
-	defer lightFan.Unsubscribe("cooldown")
-	l := <-lightCh
-	if l > lightGoal {
+func cooldown(ctx context.Context, refFan *router.Fan[env.Env], lightGoal float64, lightFan, tempFan *router.Fan[float64], cool func()) {
+	/*
+		lightCh := lightFan.Subscribe("cooldown")
+		defer lightFan.Unsubscribe("cooldown")
+		l := <-lightCh
+		if l > lightGoal {
+			cool()
+		}
+	*/
+
+	tempCh := tempFan.Subscribe("cooldown")
+	defer tempFan.Unsubscribe("cooldown")
+	refCh := refFan.Subscribe("cooldown")
+	defer refFan.Unsubscribe("cooldown")
+	ref := <-refCh
+	temp := <-tempCh
+	offset := 0.0
+	if ref.Dewpoint < 3 && ref.Dewpoint > -3 {
+		offset = 3.0
+	}
+	if temp > ref.Dewpoint {
 		cool()
 	}
 
@@ -307,42 +305,72 @@ func cooldown(ctx context.Context, lightGoal float64, lightFan *router.Fan[float
 		select {
 		case <-ctx.Done():
 			return
-		case l := <-lightCh:
-			if l < lightGoal {
-				slog.Info("light level below goal, cooldown complete", "light", l, "goal", lightGoal)
+		case temp = <-tempCh:
+			goal := math.Min(ref.Dewpoint-offset, -offset)
+			if temp < goal {
+				slog.Info("temp below reference dewpoint, cooldown complete", "temp", temp, "ref", ref.Dewpoint)
 				return
 			}
+		case ref = <-refCh:
 		}
 	}
 }
 
-func mirrorLoop(ctx context.Context, hb *hbridge.HBridge, maxCool, lowLight, highLight float64, lightFan *router.Fan[float64], pidFan *router.Fan[cmhpid.ControllerState], pidReset func()) {
+func mirrorLoop(ctx context.Context, hb *hbridge.HBridge, initCool, initHeat, lowLight, highLight float64, lightFan, tempFan *router.Fan[float64], refFan *router.Fan[env.Env], pidFan *router.Fan[cmhpid.ControllerState], pidReset func(), pidCtrl *cmhpid.Controller) {
 	for {
-		slog.Info("cooling mirror down", "goal", lowLight)
-		cooldown(ctx, lowLight, lightFan, func() { hb.Cool(maxCool) })
-		hb.Cool(0.0)
-		time.Sleep(5 * time.Second)
+		// Make sure to clear frost before starting PID control
+		heatUp(ctx, 20.0, tempFan,
+			func() error { hb.Control(0); return nil },
+			func() error { hb.Heat(initHeat); return nil },
+		)
+		time.Sleep(10 * time.Second)
+		cooldown(ctx, refFan, lowLight, lightFan, tempFan, func() { hb.Cool(initCool) })
+		hb.Control(0.0)
+		time.Sleep(10 * time.Second)
 		pidReset()
 		slog.Info("desired light level reached, resuming pid control")
-		runPID(ctx, hb, highLight, lightFan, pidFan)
+		runPID(ctx, hb, highLight, lightFan, tempFan, pidFan, pidCtrl)
 	}
 }
 
-func runPID(ctx context.Context, hb *hbridge.HBridge, highLight float64, lightFan *router.Fan[float64], pidFan *router.Fan[cmhpid.ControllerState]) {
+func runPID(ctx context.Context, hb *hbridge.HBridge, highLight float64, lightFan, tempFan *router.Fan[float64], pidFan *router.Fan[cmhpid.ControllerState], pidCtrl *cmhpid.Controller) {
 	lightCh := lightFan.Subscribe("runpid")
 	defer lightFan.Unsubscribe("runpid")
+	tempCh := tempFan.Subscribe("runpid")
+	defer tempFan.Unsubscribe("runpid")
 	pidCh := pidFan.Subscribe("runpid")
 	defer pidFan.Unsubscribe("runpid")
+	thresh := 1000.0
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case control := <-pidCh:
+			switch {
+			case thresh == 0:
+			case control.ControlErrorIntegral > thresh:
+				slog.Debug("integral error above threshold, capping", "threshold", thresh, "integral", control.ControlErrorIntegral)
+				pidCtrl.SetIntegral(thresh)
+			case control.ControlErrorIntegral < -thresh:
+				slog.Debug("integral error below threshold, capping", "threshold", thresh, "integral", control.ControlErrorIntegral)
+				pidCtrl.SetIntegral(-thresh)
+			}
 			slog.Debug("hbridge received control signal", "controlSignal", fmt.Sprintf("%0.3f", control.ControlSignal))
 			hb.Control(control.ControlSignal)
 		case l := <-lightCh:
 			if l > highLight {
 				slog.Info("light level above upper threshold, stopping pid control", "light", l, "goal", highLight)
+				return
+			}
+		case t := <-tempCh:
+			if t > 40.0 {
+				hb.Control(0)
+				slog.Info("mirror temperature above 40C, stopping pid control", "temp", t)
+				return
+			}
+			if t < -20.0 {
+				hb.Control(0)
+				slog.Info("mirror temperature below -20C, stopping pid control", "temp", t)
 				return
 			}
 		}

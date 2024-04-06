@@ -90,6 +90,7 @@ func (c *Client) GetPublisher(tempChan, dewptChan, lightChan, dutyChan <-chan fl
 	pidSignalInput := c.RegisterHassSensor(c.NewHassSensor("PID Signal Input", HassSensorIlluminance))
 	pidSetpoint := c.RegisterHassSensor(c.NewHassSensor("PID Setpoint", HassSensorIlluminance))
 	pidLinear := c.RegisterHassSensor(c.NewHassSensor("PID Linear", HassSensorIlluminance))
+	pidVolatility := c.RegisterHassSensor(c.NewHassSensor("PID Volatility", HassSensorIlluminance))
 	refTemp := c.RegisterHassSensor(c.NewHassSensor("Reference Temperature", HassSensorTemperature))
 	refHumidity := c.RegisterHassSensor(c.NewHassSensor("Reference Humidity", HassSensorHumidity))
 	refDewpoint := c.RegisterHassSensor(c.NewHassSensor("Reference Dewpoint", HassSensorTemperature))
@@ -143,6 +144,7 @@ func (c *Client) GetPublisher(tempChan, dewptChan, lightChan, dutyChan <-chan fl
 				c.HassPublishSensor(pidSignalInput, strconv.FormatFloat(pid.SignalInput, 'f', 2, 64))
 				c.HassPublishSensor(pidSetpoint, strconv.FormatFloat(pid.SetPoint, 'f', 4, 64))
 				c.HassPublishSensor(pidLinear, strconv.FormatFloat(pid.Linear, 'f', 4, 64))
+				c.HassPublishSensor(pidVolatility, strconv.FormatFloat(pid.Volatility, 'f', 4, 64))
 			case ref := <-refChan:
 				if !refSample.Ready() {
 					continue
