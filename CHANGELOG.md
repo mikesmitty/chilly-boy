@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.8.0](https://github.com/mikesmitty/chilly-boy/compare/v0.7.0...v0.8.0) (2024-04-06)
+
+
+### Features
+
+* add home assistant mqtt discovery ([a160a23](https://github.com/mikesmitty/chilly-boy/commit/a160a2304c525fdb27e7ee3ca0409b8d223f9fd1))
+* add temperature-based initial cooldown with configurable pwm ([04908f1](https://github.com/mikesmitty/chilly-boy/commit/04908f1f52ab9487d79db0a9692b4172013330bc))
+
+
+### Bug Fixes
+
+* **deps:** update module golang.org/x/sync to v0.7.0 ([#16](https://github.com/mikesmitty/chilly-boy/issues/16)) ([ddbc13e](https://github.com/mikesmitty/chilly-boy/commit/ddbc13e95d84556727e8f26755404fa7622b8cbf))
+* fix pwm functionality ([f0c4266](https://github.com/mikesmitty/chilly-boy/commit/f0c42662332b6dd1fdacf33a35baa0232ddbe8a4))
+* increase default exponent for tighter tracking ([c419f4b](https://github.com/mikesmitty/chilly-boy/commit/c419f4b95353f291bc1c701294a5dacbe6047dbb))
+
 ## [0.7.0](https://github.com/mikesmitty/chilly-boy/compare/v0.6.0...v0.7.0) (2024-04-01)
 
 
