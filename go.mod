@@ -13,7 +13,7 @@ require (
 	github.com/stianeikeland/go-rpio/v4 v4.6.0
 	go.einride.tech/pid v0.1.2
 	golang.org/x/sync v0.7.0
-	golang.org/x/text v0.14.0
+	golang.org/x/text v0.15.0
 	gonum.org/v1/gonum v0.15.0
 	periph.io/x/conn/v3 v3.7.0
 	periph.io/x/host/v3 v3.8.2
