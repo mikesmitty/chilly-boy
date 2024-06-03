@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.1](https://github.com/mikesmitty/chilly-boy/compare/v0.8.0...v0.8.1) (2024-06-03)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/spf13/viper to v1.19.0 ([#18](https://github.com/mikesmitty/chilly-boy/issues/18)) ([3a651a0](https://github.com/mikesmitty/chilly-boy/commit/3a651a0983001717fdb2b2e973d1f2d45f3ce2f8))
+* **deps:** update module golang.org/x/text to v0.15.0 ([#17](https://github.com/mikesmitty/chilly-boy/issues/17)) ([19288ec](https://github.com/mikesmitty/chilly-boy/commit/19288ec7221c101d84fd6aff49a8d8ac2ed4f9ae))
+
 ## [0.8.0](https://github.com/mikesmitty/chilly-boy/compare/v0.7.0...v0.8.0) (2024-04-06)
 
 
