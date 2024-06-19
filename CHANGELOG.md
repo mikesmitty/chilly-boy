@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.3](https://github.com/mikesmitty/chilly-boy/compare/v0.8.2...v0.8.3) (2024-06-19)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/spf13/cobra to v1.8.1 ([#22](https://github.com/mikesmitty/chilly-boy/issues/22)) ([bc1a88c](https://github.com/mikesmitty/chilly-boy/commit/bc1a88c78df024a2395defc870fbc94ba5a56ebf))
+
 ## [0.8.2](https://github.com/mikesmitty/chilly-boy/compare/v0.8.1...v0.8.2) (2024-06-07)
 
 
