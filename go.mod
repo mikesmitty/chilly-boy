@@ -11,7 +11,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
 	github.com/stianeikeland/go-rpio/v4 v4.6.0
-	go.einride.tech/pid v0.1.2
+	go.einride.tech/pid v0.1.3
 	golang.org/x/sync v0.7.0
 	golang.org/x/text v0.16.0
 	gonum.org/v1/gonum v0.15.0
