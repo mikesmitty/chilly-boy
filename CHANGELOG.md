@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.4](https://github.com/mikesmitty/chilly-boy/compare/v0.8.3...v0.8.4) (2024-07-02)
+
+
+### Bug Fixes
+
+* **deps:** update module go.einride.tech/pid to v0.1.3 ([#24](https://github.com/mikesmitty/chilly-boy/issues/24)) ([76c953b](https://github.com/mikesmitty/chilly-boy/commit/76c953b9b24f9030b5b20d192029cd3ce170ee34))
+
 ## [0.8.3](https://github.com/mikesmitty/chilly-boy/compare/v0.8.2...v0.8.3) (2024-06-19)
 
 
