@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.5](https://github.com/mikesmitty/chilly-boy/compare/v0.8.4...v0.8.5) (2024-08-10)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/eclipse/paho.mqtt.golang to v1.5.0 ([#26](https://github.com/mikesmitty/chilly-boy/issues/26)) ([500a820](https://github.com/mikesmitty/chilly-boy/commit/500a8203eb8bdf8f5ff5ccd77af9910d4a6c733f))
+* **deps:** update module golang.org/x/text to v0.17.0 ([#28](https://github.com/mikesmitty/chilly-boy/issues/28)) ([fa93457](https://github.com/mikesmitty/chilly-boy/commit/fa93457c6856c120932a118c43445b6894a3f4f0))
+* **deps:** update module periph.io/x/conn/v3 to v3.7.1 ([#29](https://github.com/mikesmitty/chilly-boy/issues/29)) ([111a31a](https://github.com/mikesmitty/chilly-boy/commit/111a31a73dd3f7d89a1640c8baf9ffd230f3bd5d))
+
 ## [0.8.4](https://github.com/mikesmitty/chilly-boy/compare/v0.8.3...v0.8.4) (2024-07-02)
 
 
