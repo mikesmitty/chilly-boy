@@ -14,7 +14,7 @@ require (
 	go.einride.tech/pid v0.1.3
 	golang.org/x/sync v0.8.0
 	golang.org/x/text v0.17.0
-	gonum.org/v1/gonum v0.15.0
+	gonum.org/v1/gonum v0.15.1
 	periph.io/x/conn/v3 v3.7.1
 	periph.io/x/host/v3 v3.8.2
 )
