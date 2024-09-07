@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.7](https://github.com/mikesmitty/chilly-boy/compare/v0.8.6...v0.8.7) (2024-09-07)
+
+
+### Bug Fixes
+
+* **deps:** update module golang.org/x/text to v0.18.0 ([#33](https://github.com/mikesmitty/chilly-boy/issues/33)) ([caaae71](https://github.com/mikesmitty/chilly-boy/commit/caaae71a25aee9f37f0c6fee2c92b0e9b710376c))
+
 ## [0.8.6](https://github.com/mikesmitty/chilly-boy/compare/v0.8.5...v0.8.6) (2024-08-18)
 
 
