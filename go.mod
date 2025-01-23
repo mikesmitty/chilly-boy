@@ -1,6 +1,8 @@
 module github.com/mikesmitty/chilly-boy
 
-go 1.22.2
+go 1.22.6
+
+toolchain go1.23.4
 
 require (
 	github.com/JenswBE/golang-tsl2591 v0.0.0-20230415120237-14a517a709e8
@@ -16,7 +18,7 @@ require (
 	golang.org/x/text v0.21.0
 	gonum.org/v1/gonum v0.15.1
 	periph.io/x/conn/v3 v3.7.1
-	periph.io/x/host/v3 v3.8.2
+	periph.io/x/host/v3 v3.8.3
 )
 
 require (
