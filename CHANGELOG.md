@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.11](https://github.com/mikesmitty/chilly-boy/compare/v0.8.10...v0.8.11) (2025-01-23)
+
+
+### Bug Fixes
+
+* **deps:** update module periph.io/x/host/v3 to v3.8.3 ([#43](https://github.com/mikesmitty/chilly-boy/issues/43)) ([6a35032](https://github.com/mikesmitty/chilly-boy/commit/6a35032fcb999657aea4ae03124285b86c6b0c94))
+
 ## [0.8.10](https://github.com/mikesmitty/chilly-boy/compare/v0.8.9...v0.8.10) (2024-12-08)
 
 
