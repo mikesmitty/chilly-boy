@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.12](https://github.com/mikesmitty/chilly-boy/compare/v0.8.11...v0.8.12) (2025-02-05)
+
+
+### Bug Fixes
+
+* **deps:** update module golang.org/x/sync to v0.11.0 ([#47](https://github.com/mikesmitty/chilly-boy/issues/47)) ([230fbd8](https://github.com/mikesmitty/chilly-boy/commit/230fbd899fe46802367ea11a83cf3f0e4a076ee1))
+
 ## [0.8.11](https://github.com/mikesmitty/chilly-boy/compare/v0.8.10...v0.8.11) (2025-01-23)
 
 
