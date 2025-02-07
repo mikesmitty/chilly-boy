@@ -17,7 +17,7 @@ require (
 	golang.org/x/sync v0.11.0
 	golang.org/x/text v0.22.0
 	gonum.org/v1/gonum v0.15.1
-	periph.io/x/conn/v3 v3.7.1
+	periph.io/x/conn/v3 v3.7.2
 	periph.io/x/host/v3 v3.8.3
 )
 
