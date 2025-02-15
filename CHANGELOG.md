@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.14](https://github.com/mikesmitty/chilly-boy/compare/v0.8.13...v0.8.14) (2025-02-15)
+
+
+### Bug Fixes
+
+* **deps:** update module periph.io/x/conn/v3 to v3.7.2 ([#51](https://github.com/mikesmitty/chilly-boy/issues/51)) ([4b851fe](https://github.com/mikesmitty/chilly-boy/commit/4b851fe82e5f241dd8345a6e256c9cc6354a5a25))
+
 ## [0.8.13](https://github.com/mikesmitty/chilly-boy/compare/v0.8.12...v0.8.13) (2025-02-05)
 
 
