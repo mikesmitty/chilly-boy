@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.15](https://github.com/mikesmitty/chilly-boy/compare/v0.8.14...v0.8.15) (2025-02-15)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/mikesmitty/sht4x to v0.3.0 ([#54](https://github.com/mikesmitty/chilly-boy/issues/54)) ([d9498f0](https://github.com/mikesmitty/chilly-boy/commit/d9498f0c4fcd89439940a861d6d46e56c5cfaf5e))
+* **deps:** update module github.com/spf13/cobra to v1.9.0 ([#55](https://github.com/mikesmitty/chilly-boy/issues/55)) ([f8cfd6e](https://github.com/mikesmitty/chilly-boy/commit/f8cfd6e01300b0942edbdd0217c5840661550899))
+
 ## [0.8.14](https://github.com/mikesmitty/chilly-boy/compare/v0.8.13...v0.8.14) (2025-02-15)
 
 
