@@ -38,6 +38,8 @@ github.com/mikesmitty/pidcalc v0.1.0 h1:PUAAW/JakX8ZK350OvSwmM4LOs8Hb0bKAYFhgcAk
 github.com/mikesmitty/pidcalc v0.1.0/go.mod h1:LiEYSTjp3BkY2o+fiM1TNvHlwQIvsoce+1dGcKI4OxQ=
 github.com/mikesmitty/sht4x v0.1.0 h1:QX50IRh1oNTLgLKmzUgnezM+1uf+OkBGNuA/PzyFRsE=
 github.com/mikesmitty/sht4x v0.1.0/go.mod h1:LWNy4j4001SjSDb417rI7FpAh5I99oaoydtXheejUQ0=
+github.com/mikesmitty/sht4x v0.3.0 h1:aBsJpoaug5Ay9Uy1Ob/NGtFslM2bC5VP56q0mZ6ozDU=
+github.com/mikesmitty/sht4x v0.3.0/go.mod h1:B1tFaekzwfilbBKbAk0Ui/7SRG8u5Au1JwVF9ViPauI=
 github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/pelletier/go-toml/v2 v2.2.0 h1:QLgLl2yMN7N+ruc31VynXs1vhMZa7CeHHejIeBAsoHo=
