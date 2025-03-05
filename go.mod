@@ -1,8 +1,8 @@
 module github.com/mikesmitty/chilly-boy
 
-go 1.22.6
+go 1.23.0
 
-toolchain go1.24.0
+toolchain go1.24.1
 
 require (
 	github.com/JenswBE/golang-tsl2591 v0.0.0-20230415120237-14a517a709e8
@@ -14,7 +14,7 @@ require (
 	github.com/spf13/viper v1.19.0
 	github.com/stianeikeland/go-rpio/v4 v4.6.0
 	go.einride.tech/pid v0.1.3
-	golang.org/x/sync v0.11.0
+	golang.org/x/sync v0.12.0
 	golang.org/x/text v0.22.0
 	gonum.org/v1/gonum v0.15.1
 	periph.io/x/conn/v3 v3.7.2
