@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.16](https://github.com/mikesmitty/chilly-boy/compare/v0.8.15...v0.8.16) (2025-03-08)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/spf13/cobra to v1.9.1 ([#57](https://github.com/mikesmitty/chilly-boy/issues/57)) ([949181c](https://github.com/mikesmitty/chilly-boy/commit/949181c7983c6b7f08e69205d84073fa3855a1fb))
+* **deps:** update module golang.org/x/text to v0.23.0 ([#60](https://github.com/mikesmitty/chilly-boy/issues/60)) ([3f78ac6](https://github.com/mikesmitty/chilly-boy/commit/3f78ac6fe7da2b5bdfcb8df2142f10949af04435))
+
 ## [0.8.15](https://github.com/mikesmitty/chilly-boy/compare/v0.8.14...v0.8.15) (2025-02-15)
 
 
