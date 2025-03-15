@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.17](https://github.com/mikesmitty/chilly-boy/compare/v0.8.16...v0.8.17) (2025-03-15)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/spf13/viper to v1.20.0 ([#62](https://github.com/mikesmitty/chilly-boy/issues/62)) ([46134b0](https://github.com/mikesmitty/chilly-boy/commit/46134b026dbf0fb06a136d19dcb53ee3a32d8959))
+
 ## [0.8.16](https://github.com/mikesmitty/chilly-boy/compare/v0.8.15...v0.8.16) (2025-03-08)
 
 
