@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.18](https://github.com/mikesmitty/chilly-boy/compare/v0.8.17...v0.8.18) (2025-03-24)
+
+
+### Bug Fixes
+
+* **deps:** update module gonum.org/v1/gonum to v0.16.0 ([#64](https://github.com/mikesmitty/chilly-boy/issues/64)) ([aa06783](https://github.com/mikesmitty/chilly-boy/commit/aa067831d4c3128421e29c294a08c775bcc9e840))
+
 ## [0.8.17](https://github.com/mikesmitty/chilly-boy/compare/v0.8.16...v0.8.17) (2025-03-15)
 
 
