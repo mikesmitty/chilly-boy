@@ -11,7 +11,7 @@ require (
 	github.com/mikesmitty/pidcalc v0.1.0
 	github.com/mikesmitty/sht4x v0.3.0
 	github.com/spf13/cobra v1.9.1
-	github.com/spf13/viper v1.20.0
+	github.com/spf13/viper v1.20.1
 	github.com/stianeikeland/go-rpio/v4 v4.6.0
 	go.einride.tech/pid v0.1.3
 	golang.org/x/sync v0.12.0
