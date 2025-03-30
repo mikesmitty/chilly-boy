@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.19](https://github.com/mikesmitty/chilly-boy/compare/v0.8.18...v0.8.19) (2025-03-30)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/spf13/viper to v1.20.1 ([#66](https://github.com/mikesmitty/chilly-boy/issues/66)) ([bc54370](https://github.com/mikesmitty/chilly-boy/commit/bc543706177ad0d019db76bbc53c18d5c8db4b37))
+* **deps:** update module periph.io/x/host/v3 to v3.8.4 ([#67](https://github.com/mikesmitty/chilly-boy/issues/67)) ([0d6a012](https://github.com/mikesmitty/chilly-boy/commit/0d6a012bb39a60a67703c7abd5bd2b3bb9b3b328))
+
 ## [0.8.18](https://github.com/mikesmitty/chilly-boy/compare/v0.8.17...v0.8.18) (2025-03-24)
 
 
