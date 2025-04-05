@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.20](https://github.com/mikesmitty/chilly-boy/compare/v0.8.19...v0.8.20) (2025-04-05)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/mikesmitty/sht4x to v0.3.1 ([#69](https://github.com/mikesmitty/chilly-boy/issues/69)) ([f4ab643](https://github.com/mikesmitty/chilly-boy/commit/f4ab64398a27cbf5f5d364998870daaf8e23adbb))
+* **deps:** update module golang.org/x/sync to v0.13.0 ([#71](https://github.com/mikesmitty/chilly-boy/issues/71)) ([035e638](https://github.com/mikesmitty/chilly-boy/commit/035e6385a0704c88b7d89e767a862b3ab23a93e9))
+
 ## [0.8.19](https://github.com/mikesmitty/chilly-boy/compare/v0.8.18...v0.8.19) (2025-03-30)
 
 
