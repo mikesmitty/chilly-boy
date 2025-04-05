@@ -2,7 +2,7 @@ module github.com/mikesmitty/chilly-boy
 
 go 1.23.0
 
-toolchain go1.24.1
+toolchain go1.24.2
 
 require (
 	github.com/JenswBE/golang-tsl2591 v0.0.0-20230415120237-14a517a709e8
