@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.21](https://github.com/mikesmitty/chilly-boy/compare/v0.8.20...v0.8.21) (2025-04-13)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/mikesmitty/sht4x to v0.3.2 ([#76](https://github.com/mikesmitty/chilly-boy/issues/76)) ([f026d19](https://github.com/mikesmitty/chilly-boy/commit/f026d19e8c808a6030b385baa5e2c6234636f1dd))
+* **deps:** update module golang.org/x/text to v0.24.0 ([#73](https://github.com/mikesmitty/chilly-boy/issues/73)) ([a9f782a](https://github.com/mikesmitty/chilly-boy/commit/a9f782ac7c48ae6ba65a2b39bed4fa81df359832))
+* **deps:** update module periph.io/x/host/v3 to v3.8.5 ([#74](https://github.com/mikesmitty/chilly-boy/issues/74)) ([4b5d931](https://github.com/mikesmitty/chilly-boy/commit/4b5d9310ab7b3665b28a4b29167215abdb5ac763))
+
 ## [0.8.20](https://github.com/mikesmitty/chilly-boy/compare/v0.8.19...v0.8.20) (2025-04-05)
 
 
