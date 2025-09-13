@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.8.26](https://github.com/mikesmitty/chilly-boy/compare/v0.8.25...v0.8.26) (2025-09-13)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/spf13/cobra to v1.10.1 ([#94](https://github.com/mikesmitty/chilly-boy/issues/94)) ([45f0f41](https://github.com/mikesmitty/chilly-boy/commit/45f0f41d9ce1f7aee93e6e891180f3620ee0e918))
+* **deps:** update module github.com/spf13/viper to v1.21.0 ([#99](https://github.com/mikesmitty/chilly-boy/issues/99)) ([aede952](https://github.com/mikesmitty/chilly-boy/commit/aede952e83f057866cfb166290bc6881d15b7aad))
+* **deps:** update module golang.org/x/sync to v0.17.0 ([#97](https://github.com/mikesmitty/chilly-boy/issues/97)) ([cc8fae9](https://github.com/mikesmitty/chilly-boy/commit/cc8fae9c2a8e95833548facea347f9ec29ce10dc))
+* **deps:** update module golang.org/x/text to v0.29.0 ([#98](https://github.com/mikesmitty/chilly-boy/issues/98)) ([d38abb7](https://github.com/mikesmitty/chilly-boy/commit/d38abb705f197f2c52bc22c8187f5f6a89151e26))
+
 ## [0.8.25](https://github.com/mikesmitty/chilly-boy/compare/v0.8.24...v0.8.25) (2025-08-12)
 
 
