@@ -6,7 +6,7 @@ toolchain go1.25.3
 
 require (
 	github.com/JenswBE/golang-tsl2591 v0.0.0-20230415120237-14a517a709e8
-	github.com/eclipse/paho.mqtt.golang v1.5.0
+	github.com/eclipse/paho.mqtt.golang v1.5.1
 	github.com/mikesmitty/max31865 v0.3.1
 	github.com/mikesmitty/pidcalc v0.1.0
 	github.com/mikesmitty/sht4x v0.3.2
@@ -40,8 +40,8 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
-	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/net v0.44.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
