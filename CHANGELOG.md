@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.27](https://github.com/mikesmitty/chilly-boy/compare/v0.8.26...v0.8.27) (2025-10-18)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/eclipse/paho.mqtt.golang to v1.5.1 ([#101](https://github.com/mikesmitty/chilly-boy/issues/101)) ([dca2541](https://github.com/mikesmitty/chilly-boy/commit/dca2541e7f3a90cfdf6b62aa976df3f0166bc018))
+* **deps:** update module golang.org/x/text to v0.30.0 ([#103](https://github.com/mikesmitty/chilly-boy/issues/103)) ([b78dd31](https://github.com/mikesmitty/chilly-boy/commit/b78dd31e22da0c4a251a5381d1f4085a33f82a36))
+
 ## [0.8.26](https://github.com/mikesmitty/chilly-boy/compare/v0.8.25...v0.8.26) (2025-09-13)
 
 
