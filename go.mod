@@ -13,7 +13,7 @@ require (
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/viper v1.21.0
 	github.com/stianeikeland/go-rpio/v4 v4.6.0
-	go.einride.tech/pid v0.1.3
+	go.einride.tech/pid v0.2.0
 	golang.org/x/sync v0.17.0
 	golang.org/x/text v0.30.0
 	gonum.org/v1/gonum v0.16.0
