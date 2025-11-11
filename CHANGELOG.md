@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.9.0](https://github.com/mikesmitty/chilly-boy/compare/v0.8.27...v0.9.0) (2025-11-11)
+
+
+### Features
+
+* Update module go.einride.tech/pid to v0.2.0 ([#105](https://github.com/mikesmitty/chilly-boy/issues/105)) ([1cbfe2c](https://github.com/mikesmitty/chilly-boy/commit/1cbfe2c8ae29b497f22fa42a2e411c91f5a9ffd2))
+* Update module golang.org/x/sync to v0.18.0 ([#108](https://github.com/mikesmitty/chilly-boy/issues/108)) ([656d09c](https://github.com/mikesmitty/chilly-boy/commit/656d09c2f5816feb79254d739a2278dcb5e346f8))
+
+
+### Bug Fixes
+
+* Update dependency go to v1.25.4 ([#107](https://github.com/mikesmitty/chilly-boy/issues/107)) ([5acc55f](https://github.com/mikesmitty/chilly-boy/commit/5acc55fb6755731c6c298821528fd0808eadec4d))
+
 ## [0.8.27](https://github.com/mikesmitty/chilly-boy/compare/v0.8.26...v0.8.27) (2025-10-18)
 
 
