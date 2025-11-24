@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.0](https://github.com/mikesmitty/chilly-boy/compare/v0.9.0...v0.10.0) (2025-11-24)
+
+
+### Features
+
+* Update module github.com/mikesmitty/sht4x to v0.3.3 ([#109](https://github.com/mikesmitty/chilly-boy/issues/109)) ([a1013b4](https://github.com/mikesmitty/chilly-boy/commit/a1013b47a51713522f141fcd0b91d572b604a6d6))
+* Update module golang.org/x/text to v0.31.0 ([5efcd19](https://github.com/mikesmitty/chilly-boy/commit/5efcd1919cc707b03d84814cb4d121c6b26b8b83))
+
 ## [0.9.0](https://github.com/mikesmitty/chilly-boy/compare/v0.8.27...v0.9.0) (2025-11-11)
 
 
