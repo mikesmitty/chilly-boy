@@ -55,6 +55,8 @@ github.com/mikesmitty/sht4x v0.3.1 h1:aBdSTRV22eda19OsEa8qsgxWe3PnY2fe0+zbDUawB5
 github.com/mikesmitty/sht4x v0.3.1/go.mod h1:ecPHGRkgBfwYYENfD78TkFNVyPSw3gNx4K1JD7M6ZkU=
 github.com/mikesmitty/sht4x v0.3.2 h1:Z0Ajf12ggzIKqzxYSYe8jaD/PDq2KxnRBouvc+Gspug=
 github.com/mikesmitty/sht4x v0.3.2/go.mod h1:tvZrnhiDyv8DlfXozesJ69c+G1lF+YnpwyknzB40EtA=
+github.com/mikesmitty/sht4x v0.3.3 h1:9q7nWEtqV9tP3jXWht9EAZbg/KqhCiVQ732i355r/HY=
+github.com/mikesmitty/sht4x v0.3.3/go.mod h1:1wZeDYykremsCvCSHaSiBNV6/5PnsNVKk+LkDdtj/r8=
 github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/pelletier/go-toml/v2 v2.2.0 h1:QLgLl2yMN7N+ruc31VynXs1vhMZa7CeHHejIeBAsoHo=
