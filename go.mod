@@ -10,7 +10,7 @@ require (
 	github.com/mikesmitty/max31865 v0.3.1
 	github.com/mikesmitty/pidcalc v0.1.0
 	github.com/mikesmitty/sht4x v0.3.3
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stianeikeland/go-rpio/v4 v4.6.0
 	go.einride.tech/pid v0.2.0
