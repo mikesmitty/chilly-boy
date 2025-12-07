@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.1](https://github.com/mikesmitty/chilly-boy/compare/v0.10.0...v0.10.1) (2025-12-07)
+
+
+### Bug Fixes
+
+* Update dependency go to v1.25.5 ([#113](https://github.com/mikesmitty/chilly-boy/issues/113)) ([9882c5d](https://github.com/mikesmitty/chilly-boy/commit/9882c5db997ca1052fe36f34a3dd214b852ac5a9))
+* Update module github.com/spf13/cobra to v1.10.2 ([#114](https://github.com/mikesmitty/chilly-boy/issues/114)) ([e660eb5](https://github.com/mikesmitty/chilly-boy/commit/e660eb5965f132bbe9e614c98a105bc8f7092087))
+
 ## [0.10.0](https://github.com/mikesmitty/chilly-boy/compare/v0.9.0...v0.10.0) (2025-11-24)
 
 
