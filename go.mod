@@ -14,8 +14,8 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/stianeikeland/go-rpio/v4 v4.6.0
 	go.einride.tech/pid v0.2.0
-	golang.org/x/sync v0.18.0
-	golang.org/x/text v0.31.0
+	golang.org/x/sync v0.19.0
+	golang.org/x/text v0.32.0
 	gonum.org/v1/gonum v0.16.0
 	periph.io/x/conn/v3 v3.7.2
 	periph.io/x/host/v3 v3.8.5
