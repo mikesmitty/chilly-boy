@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.11.0](https://github.com/mikesmitty/chilly-boy/compare/v0.10.1...v0.11.0) (2026-04-30)
+
+
+### Features
+
+* Update go toolchain directive to v1.26.2 ([#119](https://github.com/mikesmitty/chilly-boy/issues/119)) ([94f4285](https://github.com/mikesmitty/chilly-boy/commit/94f4285717d2bd34b8494aace5da7f99e2f625b8))
+* Update module golang.org/x/sync to v0.20.0 ([71a7608](https://github.com/mikesmitty/chilly-boy/commit/71a760847f8db69db250ad088a03eac2469a084c))
+* Update module golang.org/x/text to v0.36.0 ([#117](https://github.com/mikesmitty/chilly-boy/issues/117)) ([0aa2b84](https://github.com/mikesmitty/chilly-boy/commit/0aa2b842a38824dda19a3a227359f2df648aafc4))
+* Update module gonum.org/v1/gonum to v0.17.0 ([#118](https://github.com/mikesmitty/chilly-boy/issues/118)) ([dcc1e7d](https://github.com/mikesmitty/chilly-boy/commit/dcc1e7d03617744ad6b5dfe9cbd08d30c1c6a8ec))
+
+
+### Bug Fixes
+
+* Update module periph.io/x/conn/v3 to v3.7.3 ([#120](https://github.com/mikesmitty/chilly-boy/issues/120)) ([f421320](https://github.com/mikesmitty/chilly-boy/commit/f421320e6afc3c4bb1e795b7e970d40e1857ac4e))
+
 ## [0.10.1](https://github.com/mikesmitty/chilly-boy/compare/v0.10.0...v0.10.1) (2025-12-07)
 
 
