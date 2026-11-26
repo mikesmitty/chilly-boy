@@ -6,7 +6,7 @@ toolchain go1.26.2
 
 require (
 	github.com/JenswBE/golang-tsl2591 v0.0.0-20230415120237-14a517a709e8
-	github.com/eclipse/paho.mqtt.golang v1.5.1
+	github.com/eclipse/paho.mqtt.golang v1.5.2
 	github.com/mikesmitty/max31865 v0.3.1
 	github.com/mikesmitty/pidcalc v0.1.0
 	github.com/mikesmitty/sht4x v0.3.3
@@ -15,7 +15,7 @@ require (
 	github.com/stianeikeland/go-rpio/v4 v4.6.0
 	go.einride.tech/pid v0.2.0
 	golang.org/x/sync v0.20.0
-	golang.org/x/text v0.36.0
+	golang.org/x/text v0.37.0
 	gonum.org/v1/gonum v0.17.0
 	periph.io/x/conn/v3 v3.7.3
 	periph.io/x/host/v3 v3.8.5
@@ -40,8 +40,8 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
-	golang.org/x/net v0.44.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
